@@ -196,28 +196,48 @@
     .p-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
     .p-head h2{margin:0;font-size:14px;font-weight:950;letter-spacing:.8px;text-transform:uppercase;color:#fff;}
 
-    /* ✅ Grid background so it looks "alive" even when dry */
+    /* TV grid */
     .bars{
       display:flex;align-items:flex-end;gap:8px;height:140px;
       padding:10px 10px 6px;border-radius:16px;
       background:
         linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
         linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
+      overflow:hidden;
     }
+
     .bar{
-      width:18px;border-radius:10px;
-      background: linear-gradient(180deg, rgba(121,199,255,.85), rgba(55,162,255,.12));
+      width:22px;
+      border-radius:10px;
       border:1px solid rgba(255,255,255,.14);
       box-shadow: 0 10px 18px rgba(0,0,0,.22);
       position:relative;overflow:hidden;
+      background: linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12));
     }
     .bar::after{
       content:"";position:absolute;inset:0;
       background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%);
       opacity:.9;
     }
-    .bar-labels{display:flex;gap:8px;margin-top:6px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;overflow:hidden;}
-    .bar-labels span{width:18px;text-align:center;flex:0 0 auto;opacity:.92;}
+
+    .bar-labels{
+      display:flex;
+      gap:8px;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:10px;
+      font-weight:950;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      overflow:hidden;
+    }
+    .bar-labels span{
+      width:22px;
+      text-align:center;
+      flex:0 0 auto;
+      opacity:.92;
+      min-height: 12px;
+    }
 
     .right{height:100%;display:grid;grid-template-rows:1fr auto;gap:16px;min-height:0;}
     .forecast{padding:18px;min-height:0;display:flex;flex-direction:column;gap:12px;}
@@ -320,10 +340,9 @@
         <div class="precip">
           <div class="p-head">
             <h2>Precipitation</h2>
-            <span class="pill">Next 12 Hours (mm)</span>
+            <span class="pill" id="precipMode">—</span>
           </div>
 
-          <!-- ✅ Banner makes it look intentional when dry -->
           <div id="precipBanner" class="pill" style="align-self:flex-start;background:rgba(0,0,0,.18);">
             —
           </div>
@@ -484,75 +503,134 @@
       return "WEATHER UPDATE: STAY PREPARED";
     }
 
-    function renderHourly(data){
-      const el=document.getElementById("hourly");
-      el.innerHTML="";
-
-      const times=data.hourly.time;
-      const temp=data.hourly.temperature_2m;
-      const code=data.hourly.weather_code;
-      const precip=data.hourly.precipitation;
-
-      const nowISO=new Date().toISOString().slice(0,13);
-      let start=0;
+    function findStartIndex(times){
+      const now = new Date();
+      const nowKey = now.toISOString().slice(0,10) + "T" + String(now.getHours()).padStart(2,"0");
+      let start = 0;
       for(let i=0;i<times.length;i++){
-        if(times[i].slice(0,13)>=nowISO){ start=i; break; }
+        if(times[i].slice(0,13) >= nowKey){ start=i; break; }
       }
+      return start;
+    }
+
+    function renderHourly(data){
+      const hourlyEl=document.getElementById("hourly");
+      hourlyEl.innerHTML="";
+
+      const times=data.hourly?.time || [];
+      const temp=data.hourly?.temperature_2m || [];
+      const code=data.hourly?.weather_code || [];
+
+      const precipMM = data.hourly?.precipitation;                  // mm
+      const precipProb = data.hourly?.precipitation_probability;    // %
+
+      const start = findStartIndex(times);
 
       // Hourly tiles
       for(let i=start;i<Math.min(start+12,times.length);i++){
-        const t=new Date(times[i]);
-        const label=t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const t = new Date(times[i]);
+        const label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const pmm = Number(precipMM?.[i] ?? 0);
+        const ppr = precipProb?.[i];
+        const mini = (ppr != null && !isNaN(ppr))
+          ? `POP ${Math.round(ppr)}%`
+          : `P ${pmm.toFixed(1)} mm`;
+
         const item=document.createElement("div");
         item.className="h-item";
         item.innerHTML=`
           <div class="h-time">${label}</div>
           <div class="h-ico">${svgFor(code[i], 40)}</div>
           <div class="h-temp">${Math.round(temp[i])}°</div>
-          <div class="h-mini">P ${(precip[i] ?? 0).toFixed(1)} mm</div>
+          <div class="h-mini">${mini}</div>
         `;
-        el.appendChild(item);
+        hourlyEl.appendChild(item);
       }
 
-      // Precip bars
+      // Precipitation panel bars
       const bars=document.getElementById("bars");
       const labels=document.getElementById("barLabels");
       const banner=document.getElementById("precipBanner");
+      const mode=document.getElementById("precipMode");
+
       bars.innerHTML="";
       labels.innerHTML="";
 
-      // slice & scaling
-      const slice=[];
-      for(let i=start;i<Math.min(start+12,times.length);i++) slice.push(Number(precip[i] ?? 0));
-      const max=Math.max(...slice, 0);
-      const noPrecip = max < 0.1;
+      // ✅ CHANGE 2: Force chart to use POP when available, else fall back to mm
+      let series = null;
+      let isProb = false;
 
-      // IMPORTANT: scale against 1.0mm when it's basically dry, so you still see bars
-      const scaleMax = noPrecip ? 1.0 : max;
+      if (Array.isArray(precipProb) && precipProb.length) {
+        series = precipProb.map(v => Number(v ?? 0));
+        isProb = true;
+        mode.textContent = "% (POP)";
+      } else if (Array.isArray(precipMM) && precipMM.length) {
+        series = precipMM.map(v => Number(v ?? 0));
+        isProb = false;
+        mode.textContent = "mm";
+      } else {
+        series = null;
+        mode.textContent = "—";
+      }
 
-      banner.textContent = noPrecip ? "NO PRECIP EXPECTED (NEXT 12H)" : `MAX ${max.toFixed(1)} MM (NEXT 12H)`;
+      if(!series){
+        banner.textContent = "PRECIP DATA NOT AVAILABLE";
+        // baseline bars for layout
+        for(let k=0;k<12;k++){
+          const b=document.createElement("div");
+          b.className="bar";
+          b.style.height="36px";
+          b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+          bars.appendChild(b);
+
+          const lab=document.createElement("span");
+          lab.textContent = (k % 2 === 0) ? "--" : "";
+          labels.appendChild(lab);
+        }
+        return;
+      }
+
+      const slice = [];
+      for (let i=start; i<Math.min(start+12, times.length); i++) slice.push(Number(series[i] ?? 0));
+      const max = Math.max(...slice, 0);
+
+      // ✅ CHANGE 2 (continued): Banner logic that matches POP vs mm
+      banner.textContent = isProb
+        ? (max < 5 ? "LOW CHANCE OF PRECIP (NEXT 12H)" : `MAX POP ${Math.round(max)}% (NEXT 12H)`)
+        : (max < 0.1 ? "NO PRECIP EXPECTED (NEXT 12H)" : `MAX ${max.toFixed(1)} MM (NEXT 12H)`);
+
+      // Scaling: keep visible on dry days
+      const scaleMax = isProb ? Math.max(20, max) : (max < 0.1 ? 1.0 : max);
 
       for(let i=start;i<Math.min(start+12,times.length);i++){
-        const val=Number(precip[i] ?? 0);
+        const val = Number(series[i] ?? 0);
 
-        // Baseline height so it never looks dead
-        const h=Math.max(18, Math.round((val/scaleMax)*130));
+        // baseline height so bars aren't dots/circles
+        const h = Math.max(34, Math.round((val/scaleMax)*120));
 
         const b=document.createElement("div");
         b.className="bar";
         b.style.height=`${Math.min(140,h)}px`;
 
-        if(val>=3) b.style.background="linear-gradient(180deg, rgba(255,176,32,.98), rgba(55,162,255,.18))";
-        else if(val>=1) b.style.background="linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
-        else if(val>=0.2) b.style.background="linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12))";
-        else b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+        if(isProb){
+          if(val >= 60) b.style.background="linear-gradient(180deg, rgba(255,176,32,.98), rgba(55,162,255,.18))";
+          else if(val >= 30) b.style.background="linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
+          else if(val >= 10) b.style.background="linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12))";
+          else b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+        } else {
+          if(val >= 3) b.style.background="linear-gradient(180deg, rgba(255,176,32,.98), rgba(55,162,255,.18))";
+          else if(val >= 1) b.style.background="linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
+          else if(val >= 0.2) b.style.background="linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12))";
+          else b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+        }
 
         bars.appendChild(b);
 
-        const t=new Date(times[i]);
-        const hh=t.toLocaleTimeString([], {hour:'2-digit'}).replace(/\s/g,'');
+        // labels: show hour only, every other hour to prevent overlap
+        const t = new Date(times[i]);
+        const hh = String(t.getHours()).padStart(2,"0");
         const lab=document.createElement("span");
-        lab.textContent=hh;
+        lab.textContent = ((i-start) % 2 === 0) ? hh : "";
         labels.appendChild(lab);
       }
     }
@@ -588,10 +666,12 @@
 
     async function loadWeather(){
       const {lat,lon,tz}=HALIFAX;
+
+      // ✅ CHANGE 1: ensure precipitation_probability is requested
       const url=
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
         `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,cloud_cover,uv_index,pressure_msl`+
-        `&hourly=temperature_2m,weather_code,precipitation`+
+        `&hourly=temperature_2m,weather_code,precipitation,precipitation_probability`+
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum`+
         `&timezone=${encodeURIComponent(tz)}`;
 
@@ -637,6 +717,8 @@
         document.getElementById("status").textContent="OFFLINE / BLOCKED";
         document.getElementById("wxText").textContent="UNABLE TO LOAD WEATHER";
         document.getElementById("headline").textContent="CHECK NETWORK ACCESS TO api.open-meteo.com";
+        document.getElementById("precipBanner").textContent="PRECIP DATA NOT AVAILABLE";
+        document.getElementById("precipMode").textContent="—";
       }
       setInterval(() => loadWeather().catch(()=>{}), 5*60*1000);
     }
