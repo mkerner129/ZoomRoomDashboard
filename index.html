@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Room Dashboard — Halifax (with Weather Icons)</title>
+  <title>Room Dashboard — Halifax</title>
   <style>
     :root{
       --bg:#f7f8fb;
@@ -34,6 +34,7 @@
     .title{font-size:22px;font-weight:800}
     .subtitle{color:var(--muted);font-size:14px;margin-top:4px}
     .clock{font-variant-numeric: tabular-nums;font-size:18px;font-weight:700}
+
     main{
       padding:18px 22px 26px;
       display:grid;
@@ -76,9 +77,6 @@
     .newsitem a{color:var(--text);text-decoration:none;font-weight:800;font-size:14px}
     .newsmeta{font-size:12px;color:var(--muted);display:flex;gap:10px;align-items:center}
 
-    /* Ticker */
-    #tv-ticker{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
-
     /* Markets chart */
     .markets-chart{
       border:1px solid var(--border);
@@ -97,7 +95,8 @@
       background:#fff;
       white-space:pre-wrap;
       word-break:break-word;
-      display:none;
+      display:block; /* always present; we’ll fill it when errors happen */
+      min-height: 0;
     }
 
     .foot{margin-top:10px;font-size:12px;color:var(--muted)}
@@ -132,9 +131,7 @@
           </div>
 
           <div style="height:12px"></div>
-
           <div class="forecast" id="forecast"></div>
-
           <div class="foot">Weather data: Open-Meteo (no API key).</div>
         </div>
 
@@ -153,23 +150,21 @@
     <section class="card">
       <h2>
         <span>Markets</span>
-        <span class="badge">Live ticker</span>
+        <span class="badge" id="mkUpdated">Updating…</span>
       </h2>
-
-      <div id="tv-ticker"></div>
-
-      <div style="height:12px"></div>
 
       <div class="markets-chart">
         <div class="row" style="justify-content:space-between;margin-bottom:8px;align-items:center">
           <div style="font-weight:900">S&P 500 vs Dow (1Y, normalized)</div>
-          <div class="badge" id="mkUpdated">Updating…</div>
+          <div class="badge">Line</div>
         </div>
         <canvas id="mkChart"></canvas>
         <div class="mk-error" id="mkError"></div>
       </div>
 
-      <div class="foot">Data source: Stooq daily close. If it fails, the error details will show above.</div>
+      <div class="foot">
+        If this shows an error, it’s the exact reason the chart didn’t load (CORS, blocked domain, CDN blocked, etc.).
+      </div>
     </section>
 
     <!-- NEWS -->
@@ -202,17 +197,37 @@
 
   <script>
     // -------------------------
+    // Helpers: always show JS errors in the mkError box
+    // -------------------------
+    function setMkError(msg){
+      const el = document.getElementById("mkError");
+      if (!el) return;
+      el.textContent = msg || "";
+    }
+
+    window.addEventListener("error", (ev) => {
+      const msg = `JavaScript error:\n${ev.message}\n\nSource: ${ev.filename}:${ev.lineno}:${ev.colno}`;
+      console.error(ev);
+      setMkError(msg);
+      const b = document.getElementById("mkUpdated");
+      if (b) b.textContent = "Markets unavailable";
+    });
+
+    window.addEventListener("unhandledrejection", (ev) => {
+      const msg = `Unhandled promise rejection:\n${(ev.reason && ev.reason.message) ? ev.reason.message : String(ev.reason)}`;
+      console.error(ev.reason);
+      setMkError(msg);
+      const b = document.getElementById("mkUpdated");
+      if (b) b.textContent = "Markets unavailable";
+    });
+
+    // -------------------------
     // Configuration
     // -------------------------
     const HALIFAX = { lat: 44.6488, lon: -63.5752, tz: "America/Halifax" };
     const LOCAL_RSS = "https://novascotia.ca/news/rss/";
     const WORLD_RSS = "https://feeds.bbci.co.uk/news/rss.xml?edition=int";
     const CORS_RAW = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const TRADINGVIEW_SYMBOLS = [
-      { proName: "SP:SPX", title: "S&P 500" },
-      { proName: "NASDAQ:NDX", title: "Nasdaq 100" },
-      { proName: "TSX:TSX", title: "TSX" }
-    ];
 
     // Clock
     function tickClock(){
@@ -224,7 +239,7 @@
     tickClock(); setInterval(tickClock, 1000);
 
     // -------------------------
-    // Weather icons
+    // Weather icons (same as your original)
     // -------------------------
     function svgFor(code, size=84){
       const cloudy = [2,3];
@@ -423,41 +438,15 @@
     }
 
     // -------------------------
-    // TradingView ticker (keep; if it fails on your network, remove it)
-    // -------------------------
-    function addTradingViewTicker(){
-      const container = document.getElementById("tv-ticker"); container.innerHTML="";
-      const s = document.createElement("script");
-      s.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
-      s.async = true;
-      s.innerHTML = JSON.stringify({
-        symbols: TRADINGVIEW_SYMBOLS,
-        showSymbolLogo: true,
-        isTransparent: false,
-        displayMode: "adaptive",
-        locale: "en",
-        colorTheme: "light"
-      });
-      container.appendChild(s);
-    }
-
-    // -------------------------
-    // Markets chart: rolling 1Y, normalized, line
+    // Markets chart: robust fetch + normalize + line
     // -------------------------
     let mkChart;
-
-    function showMkError(msg){
-      const el = document.getElementById("mkError");
-      if(!el) return;
-      el.style.display = msg ? "block" : "none";
-      el.textContent = msg || "";
-    }
 
     async function fetchTextWithFallback(directUrl){
       // Try direct first
       try{
         const r = await fetch(directUrl, { cache:"no-store" });
-        if(!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+        if(!r.ok) throw new Error(`Direct HTTP ${r.status} ${r.statusText}`);
         return await r.text();
       }catch(directErr){
         // Fallback to AllOrigins
@@ -469,7 +458,6 @@
     }
 
     async function fetchStooqDaily(symbol){
-      // Stooq daily CSV
       const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
       const csv = await fetchTextWithFallback(url);
 
@@ -511,10 +499,8 @@
       const badge = document.getElementById("mkUpdated");
       try{
         if (badge) badge.textContent = "Updating…";
-        showMkError("");
+        setMkError("");
 
-        // Stooq symbols:
-        // ^SPX = S&P 500 index, ^DJI = Dow Jones Industrial Average
         const [spxRaw, djiRaw] = await Promise.all([
           fetchStooqDaily("^spx"),
           fetchStooqDaily("^dji"),
@@ -524,7 +510,7 @@
         const dji = normalizeTo100(rollingOneYear(djiRaw));
 
         const canvas = document.getElementById("mkChart");
-        if(!canvas) return;
+        if(!canvas) throw new Error("Missing mkChart canvas");
 
         if(mkChart) mkChart.destroy();
 
@@ -559,13 +545,11 @@
       }catch(e){
         console.error("Markets chart error:", e);
         if (badge) badge.textContent = "Markets unavailable";
-        showMkError(
-          `Markets load failed.\n\n` +
-          `Error: ${e?.message || e}\n\n` +
-          `Try opening these URLs in the same browser:\n` +
-          `1) https://stooq.com/q/d/l/?s=%5Espx&i=d\n` +
-          `2) https://stooq.com/q/d/l/?s=%5Edji&i=d\n\n` +
-          `If those open but the chart still fails, the issue is likely browser CORS blocking.`
+        setMkError(
+          `Markets load failed:\n${e?.message || e}\n\n` +
+          `Try these in the SAME browser:\n` +
+          `- https://stooq.com/q/d/l/?s=%5Espx&i=d\n` +
+          `- https://stooq.com/q/d/l/?s=%5Edji&i=d\n`
         );
       }
     }
@@ -574,16 +558,15 @@
     // Boot
     // -------------------------
     (async function init(){
-      // If your network 403s s3.tradingview.com, this ticker will also fail.
-      // If so, just comment out the next line.
-      try { addTradingViewTicker(); } catch(e) {}
+      // If you see errors here, it means CDN scripts or parsing are blocked.
+      setMkError("Loading markets… (if this never changes, a script/CDN may be blocked)");
 
       try{ await loadWeather(); }catch(e){
         document.getElementById('wxText').textContent = "Weather unavailable";
       }
       try{ await loadNews(); }catch(e){}
 
-      renderMarketsChart().catch(()=>{});
+      await renderMarketsChart();
 
       setInterval(()=>loadWeather().catch(()=>{}), 5*60*1000);
       setInterval(()=>loadNews().catch(()=>{}), 10*60*1000);
