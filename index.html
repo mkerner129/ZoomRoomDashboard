@@ -3,383 +3,536 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Halifax Weather Outlook</title>
+  <title>Halifax Weather Channel Board</title>
   <style>
     :root{
-      --bg1:#eef6ff;
-      --bg2:#f8fbff;
-      --card:#ffffffcc;
-      --card2:#ffffffee;
-      --text:#0f172a;
-      --muted:#475569;
-      --border:rgba(226,232,240,.8);
-      --shadow:0 14px 34px rgba(2,6,23,.12);
-      --shadow2:0 8px 18px rgba(2,6,23,.10);
-      --accent:#2563eb;
-      --good:#16a34a;
-      --warn:#d97706;
-      --bad:#dc2626;
+      /* TV-style palette */
+      --bgTop:#061a3a;
+      --bgMid:#0a2a5f;
+      --bgBot:#081833;
+
+      --card:#0b2b5fe6;
+      --card2:#0c356fe6;
+      --glass: rgba(255,255,255,.08);
+      --glass2: rgba(255,255,255,.12);
+
+      --text:#eaf2ff;
+      --muted:#b9d1ff;
+
+      --border: rgba(255,255,255,.14);
+      --shadow: 0 18px 44px rgba(0,0,0,.45);
+      --shadow2: 0 10px 22px rgba(0,0,0,.35);
+
+      --accent:#36c2ff;
+      --accent2:#7c4dff;
+      --warn:#ffb020;
+      --rain:#37a2ff;
+      --snow:#bfe7ff;
+      --good:#38d06b;
+
+      --tileRadius: 18px;
+      --cardRadius: 26px;
+
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
     }
 
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
+      font-family: var(--font);
       color:var(--text);
       background:
-        radial-gradient(1100px 700px at 15% 20%, rgba(37,99,235,.18), transparent 60%),
-        radial-gradient(900px 650px at 85% 10%, rgba(56,189,248,.20), transparent 55%),
-        radial-gradient(900px 650px at 70% 90%, rgba(99,102,241,.14), transparent 60%),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
+        radial-gradient(1200px 700px at 10% 10%, rgba(54,194,255,.28), transparent 60%),
+        radial-gradient(900px 700px at 85% 15%, rgba(124,77,255,.22), transparent 60%),
+        radial-gradient(900px 700px at 50% 100%, rgba(255,176,32,.12), transparent 60%),
+        linear-gradient(180deg, var(--bgTop), var(--bgMid) 50%, var(--bgBot));
       overflow:hidden;
     }
 
-    /* subtle animated “cloud” blobs */
-    .blob{
-      position:absolute; inset:auto;
-      width:520px; height:520px;
-      filter: blur(40px);
-      opacity:.25;
-      border-radius:50%;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.9), rgba(255,255,255,.0) 70%);
-      animation: floaty 16s ease-in-out infinite;
+    /* animated diagonal sheen */
+    .sheen{
+      position:absolute; inset:-60% -60%;
+      background: linear-gradient(120deg,
+        transparent 35%,
+        rgba(255,255,255,.08) 45%,
+        transparent 55%);
+      transform: rotate(8deg);
+      animation: sweep 14s linear infinite;
       pointer-events:none;
+      mix-blend-mode: screen;
+      opacity:.55;
     }
-    .blob.b1{top:-160px; left:-140px; animation-duration: 18s;}
-    .blob.b2{top:-180px; right:-180px; animation-duration: 22s; opacity:.20;}
-    .blob.b3{bottom:-220px; left:35%; animation-duration: 20s; opacity:.18;}
-    @keyframes floaty{
-      0%,100%{transform: translate(0,0) scale(1)}
-      50%{transform: translate(24px,18px) scale(1.03)}
+    @keyframes sweep{
+      0%{transform: translateX(-22%) rotate(8deg)}
+      100%{transform: translateX(22%) rotate(8deg)}
     }
 
     header{
-      position:relative;
-      padding:26px 28px 16px;
+      padding:22px 26px 14px;
       display:flex;
       justify-content:space-between;
       align-items:flex-end;
       gap:16px;
+      position:relative;
+      z-index:2;
+    }
+    .brand{
+      display:flex;
+      align-items:flex-end;
+      gap:14px;
+    }
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 60%),
+        linear-gradient(135deg, rgba(54,194,255,.95), rgba(124,77,255,.92));
+      box-shadow: var(--shadow2);
+      border:1px solid rgba(255,255,255,.22);
     }
     .title{
       font-size:30px;
-      font-weight:900;
-      letter-spacing:-.6px;
-      line-height:1.1;
+      font-weight:950;
+      letter-spacing:-.5px;
+      line-height:1.05;
+      text-transform:uppercase;
     }
-    .sub{
+    .subtitle{
       margin-top:6px;
       color:var(--muted);
-      font-size:14px;
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.6px;
+      text-transform:uppercase;
       display:flex;
-      align-items:center;
       gap:10px;
       flex-wrap:wrap;
+      align-items:center;
     }
     .pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding:6px 10px;
+      padding:7px 12px;
       border:1px solid var(--border);
       border-radius:999px;
-      background:rgba(255,255,255,.65);
-      backdrop-filter: blur(6px);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
       font-size:12px;
       color:var(--muted);
+      font-weight:800;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      white-space:nowrap;
     }
     .clock{
-      font-variant-numeric: tabular-nums;
       text-align:right;
-      font-weight:900;
-      font-size:22px;
+      font-variant-numeric: tabular-nums;
+      font-weight:950;
+      font-size:24px;
       letter-spacing:-.3px;
+      text-transform:uppercase;
     }
     .clock small{
       display:block;
       margin-top:6px;
       color:var(--muted);
       font-size:12px;
-      font-weight:700;
+      font-weight:850;
+      letter-spacing:.7px;
     }
 
     main{
       position:relative;
-      padding:0 28px 26px;
+      z-index:2;
+      padding:0 26px 20px;
+      height: calc(100% - 96px);
       display:grid;
       grid-template-columns: 1.35fr .95fr;
       gap:16px;
-      height: calc(100% - 96px);
     }
 
     .card{
-      background:var(--card);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
       border:1px solid var(--border);
-      border-radius:22px;
-      box-shadow:var(--shadow);
-      backdrop-filter: blur(10px);
+      border-radius: var(--cardRadius);
+      box-shadow: var(--shadow);
       overflow:hidden;
+      backdrop-filter: blur(12px);
     }
-    .card-inner{
-      padding:18px;
-    }
+    .card-inner{ padding:18px; }
 
-    /* big now section */
-    .now{
+    /* LEFT: now + hourly + precip bars */
+    .left{
       display:grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap:16px;
+      grid-template-rows: auto auto 1fr;
+      gap:14px;
       height:100%;
     }
+
+    /* NOW HERO */
     .hero{
-      background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.70));
-      border:1px solid var(--border);
-      border-radius:20px;
-      box-shadow:var(--shadow2);
-      padding:18px;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      min-height:0;
+      background: linear-gradient(135deg, rgba(54,194,255,.16), rgba(124,77,255,.12));
+      border:1px solid rgba(255,255,255,.16);
+      border-radius: 22px;
+      padding:16px;
+      box-shadow: var(--shadow2);
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:14px;
+      align-items:stretch;
     }
-    .hero-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
-    }
-    .hero-temp{
-      font-size:74px;
-      font-weight:950;
+    .hero-left{ display:flex; flex-direction:column; justify-content:space-between; gap:10px; }
+    .temp-row{ display:flex; align-items:flex-start; gap:14px; }
+    .temp{
+      font-size:86px;
+      font-weight:1000;
       letter-spacing:-2px;
       line-height:1;
-      margin-top:2px;
+      text-shadow: 0 10px 30px rgba(0,0,0,.25);
     }
-    .hero-desc{
-      margin-top:6px;
-      color:var(--muted);
-      font-size:16px;
-      font-weight:700;
+    .desc{
+      margin-top:8px;
+      font-size:18px;
+      font-weight:900;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      color:#ffffff;
     }
-    .hero-meta{
+    .meta{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       margin-top:10px;
     }
-    .icon-wrap{
-      width:110px;
-      height:110px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:20px;
-      background:rgba(255,255,255,.55);
-      border:1px solid var(--border);
-    }
-
-    /* metrics */
-    .metrics{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-      align-content:start;
-    }
-    .metric{
-      background:rgba(255,255,255,.78);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:12px;
-      box-shadow:var(--shadow2);
-      min-height:78px;
-    }
-    .metric .k{
-      color:var(--muted);
+    .meta .chip{
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:999px;
+      padding:8px 12px;
       font-size:12px;
-      font-weight:800;
+      font-weight:900;
       letter-spacing:.5px;
       text-transform:uppercase;
-    }
-    .metric .v{
-      margin-top:8px;
-      font-size:20px;
-      font-weight:950;
-      font-variant-numeric: tabular-nums;
-    }
-    .metric .s{
-      margin-top:4px;
-      font-size:12px;
       color:var(--muted);
-      font-weight:700;
+    }
+    .meta .chip b{ color: #fff; font-variant-numeric: tabular-nums; }
+
+    .icon-box{
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.16);
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.16), transparent 55%),
+                  linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.18));
+      box-shadow: var(--shadow2);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+      gap:10px;
+    }
+    .icon-wrap{ width:120px; height:120px; display:flex; align-items:center; justify-content:center; }
+    .feels{
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      color: var(--muted);
     }
 
-    /* hourly */
+    /* HOURLY STRIP */
     .hourly{
-      margin-top:14px;
-      background:rgba(255,255,255,.72);
-      border:1px solid var(--border);
-      border-radius:20px;
-      padding:14px;
-      box-shadow:var(--shadow2);
-      min-height:0;
+      padding:14px 14px 12px;
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.16);
+      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.05));
+      box-shadow: var(--shadow2);
+      overflow:hidden;
     }
-    .h-title{
+    .h-head{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:12px;
       margin-bottom:10px;
+      gap:10px;
     }
-    .h-title h2{
+    .h-head h2{
       margin:0;
       font-size:14px;
       font-weight:950;
-      letter-spacing:-.2px;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      color:#fff;
     }
-    .h-scroller{
+    .h-strip{
       display:flex;
       gap:10px;
       overflow:hidden;
     }
     .h-item{
-      flex: 0 0 auto;
-      width:96px;
-      border:1px solid var(--border);
-      border-radius:16px;
+      width:104px;
+      flex:0 0 auto;
+      border-radius: var(--tileRadius);
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.14);
       padding:10px 10px 8px;
-      background:rgba(255,255,255,.82);
       text-align:center;
     }
     .h-time{
-      font-size:12px;
       color:var(--muted);
-      font-weight:800;
-      letter-spacing:.3px;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.6px;
+      text-transform:uppercase;
     }
-    .h-ico{height:40px; display:flex; align-items:center; justify-content:center; margin:6px 0;}
+    .h-ico{ height:44px; display:flex; align-items:center; justify-content:center; margin:6px 0; }
     .h-temp{
-      font-size:16px;
-      font-weight:950;
+      font-size:18px;
+      font-weight:1000;
       font-variant-numeric: tabular-nums;
+      color:#fff;
     }
     .h-mini{
       margin-top:4px;
       font-size:11px;
       color:var(--muted);
-      font-weight:700;
+      font-weight:900;
+      letter-spacing:.4px;
+      text-transform:uppercase;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
-    /* 7-day forecast */
-    .side{
-      height:100%;
+    /* PRECIP BAR CHART */
+    .precip{
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.16);
+      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.05));
+      box-shadow: var(--shadow2);
+      padding:14px;
       display:flex;
       flex-direction:column;
+      gap:10px;
+      overflow:hidden;
+    }
+    .p-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .p-head h2{
+      margin:0;
+      font-size:14px;
+      font-weight:950;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      color:#fff;
+    }
+    .bars{
+      display:flex;
+      align-items:flex-end;
+      gap:8px;
+      height:140px;
+      padding-top:6px;
+    }
+    .bar{
+      width:18px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(55,162,255,.95), rgba(55,162,255,.25));
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 10px 18px rgba(0,0,0,.22);
+      position:relative;
+      overflow:hidden;
+    }
+    .bar::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%);
+      opacity:.9;
+    }
+    .bar-labels{
+      display:flex;
+      gap:8px;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      overflow:hidden;
+    }
+    .bar-labels span{
+      width:18px;
+      text-align:center;
+      flex:0 0 auto;
+      opacity:.92;
+    }
+
+    /* RIGHT: 7-day big tiles + stats */
+    .right{
+      height:100%;
+      display:grid;
+      grid-template-rows: 1fr auto;
       gap:16px;
       min-height:0;
     }
+
     .forecast{
       padding:18px;
-      height:100%;
+      min-height:0;
       display:flex;
       flex-direction:column;
-      min-height:0;
+      gap:12px;
     }
     .f-head{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:12px;
-      margin-bottom:12px;
+      gap:10px;
     }
     .f-head h2{
       margin:0;
       font-size:14px;
       font-weight:950;
-      letter-spacing:-.2px;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      color:#fff;
     }
-    .f-list{
-      display:flex;
-      flex-direction:column;
+    .f-grid{
+      display:grid;
+      grid-template-columns: 1fr;
       gap:10px;
       overflow:hidden;
       flex:1 1 auto;
       min-height:0;
     }
-    .f-row{
+    .f-tile{
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.14);
+      padding:12px 12px;
       display:grid;
-      grid-template-columns: 72px 42px 1fr auto;
+      grid-template-columns: 86px 44px 1fr auto;
       gap:10px;
       align-items:center;
-      padding:10px 12px;
-      border:1px solid var(--border);
-      border-radius:18px;
-      background:rgba(255,255,255,.78);
-      box-shadow:var(--shadow2);
+      box-shadow: 0 10px 18px rgba(0,0,0,.22);
     }
     .f-day{
+      font-weight:1000;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .f-ico{ display:flex; align-items:center; justify-content:center; }
+    .f-desc{
       font-weight:950;
       font-size:13px;
-      letter-spacing:.2px;
-      color:var(--muted);
       text-transform:uppercase;
-    }
-    .f-ico{display:flex; align-items:center; justify-content:center}
-    .f-desc{
-      font-size:13px;
-      font-weight:800;
-      color:var(--text);
+      letter-spacing:.3px;
+      color:#fff;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
     .f-temps{
-      font-weight:950;
+      font-weight:1000;
       font-variant-numeric: tabular-nums;
       font-size:14px;
       white-space:nowrap;
+      color:#fff;
+    }
+    .f-sub{
+      margin-top:2px;
+      color:var(--muted);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+    }
+
+    .stats{
+      padding:14px;
+      border-radius: 26px;
+      border:1px solid rgba(255,255,255,.16);
+      background: linear-gradient(135deg, rgba(54,194,255,.10), rgba(124,77,255,.08));
+      box-shadow: var(--shadow);
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+    }
+    .stat{
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.14);
+      padding:10px 12px;
+      text-align:left;
+    }
+    .stat .k{
+      color:var(--muted);
+      font-size:11px;
+      font-weight:950;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+    }
+    .stat .v{
+      margin-top:8px;
+      color:#fff;
+      font-size:18px;
+      font-weight:1000;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat .s{
+      margin-top:3px;
+      color:var(--muted);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.5px;
+      text-transform:uppercase;
     }
 
     footer{
       position:absolute;
-      left:28px;
-      right:28px;
-      bottom:16px;
+      left:26px;
+      right:26px;
+      bottom:14px;
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:10px;
       color:var(--muted);
       font-size:12px;
-      font-weight:700;
+      font-weight:900;
+      letter-spacing:.6px;
+      text-transform:uppercase;
       pointer-events:none;
+      z-index:2;
     }
 
     @media (max-width: 1200px){
-      main{grid-template-columns:1fr; height:auto; overflow:auto}
       body{overflow:auto}
-      .now{grid-template-columns:1fr}
-      footer{position:static; padding:12px 28px 18px}
+      main{grid-template-columns: 1fr; height:auto}
+      footer{position:static; padding:10px 26px 16px}
     }
   </style>
 </head>
 <body>
-  <div class="blob b1"></div>
-  <div class="blob b2"></div>
-  <div class="blob b3"></div>
+  <div class="sheen"></div>
 
   <header>
-    <div>
-      <div class="title">Halifax Weather Outlook</div>
-      <div class="sub">
-        <span class="pill" id="wxUpdated">Updating…</span>
-        <span class="pill" id="wxSource">Source: Open-Meteo</span>
-        <span class="pill" id="wxNote">Auto refresh: 5 min</span>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <div class="title">Weather Center</div>
+        <div class="subtitle">
+          <span>Halifax, Nova Scotia</span>
+          <span class="pill" id="wxUpdated">Updating…</span>
+          <span class="pill">Next update: 5 min</span>
+        </div>
       </div>
     </div>
+
     <div class="clock" id="clock">
       --:--
       <small id="clockDate">—</small>
@@ -387,81 +540,87 @@
   </header>
 
   <main>
-    <!-- NOW + HOURLY -->
+    <!-- LEFT PANEL -->
     <section class="card">
-      <div class="card-inner now">
+      <div class="card-inner left">
+
+        <!-- NOW -->
         <div class="hero">
-          <div class="hero-top">
+          <div class="hero-left">
             <div>
-              <div class="hero-temp"><span id="temp">--</span>°C</div>
-              <div class="hero-desc" id="wxText">Loading…</div>
-              <div class="hero-meta">
-                <span class="pill">Feels like <b id="apparent">--</b>°C</span>
-                <span class="pill">Wind <b id="wind">--</b> km/h</span>
-                <span class="pill">Precip <b id="precip">--</b> mm</span>
+              <div class="temp-row">
+                <div class="temp"><span id="temp">--</span>°</div>
+              </div>
+              <div class="desc" id="wxText">Loading…</div>
+              <div class="meta">
+                <div class="chip">Feels <b id="apparent">--</b>°C</div>
+                <div class="chip">Wind <b id="wind">--</b> km/h <b id="windDir">--</b></div>
+                <div class="chip">Precip <b id="precip">--</b> mm</div>
               </div>
             </div>
+            <div class="pill" id="headline">—</div>
+          </div>
+
+          <div class="icon-box">
             <div class="icon-wrap" id="wxIcon" aria-hidden="true"></div>
-          </div>
-
-          <div class="hourly">
-            <div class="h-title">
-              <h2>Next 12 hours</h2>
-              <span class="pill">Local time</span>
-            </div>
-            <div class="h-scroller" id="hourly"></div>
+            <div class="feels">Cloud <b id="cloud">--</b>% • Hum <b id="humidity">--</b>% • UV <b id="uv">--</b> (<span id="uvHint">—</span>)</div>
           </div>
         </div>
 
-        <div class="metrics" aria-label="Weather metrics">
-          <div class="metric">
-            <div class="k">Humidity</div>
-            <div class="v"><span id="humidity">--</span>%</div>
-            <div class="s">Relative humidity</div>
+        <!-- HOURLY -->
+        <div class="hourly">
+          <div class="h-head">
+            <h2>Hourly Outlook</h2>
+            <span class="pill">Next 12 Hours</span>
           </div>
-          <div class="metric">
-            <div class="k">Cloud cover</div>
-            <div class="v"><span id="cloud">--</span>%</div>
-            <div class="s">Sky coverage</div>
-          </div>
-          <div class="metric">
-            <div class="k">UV index</div>
-            <div class="v"><span id="uv">--</span></div>
-            <div class="s" id="uvHint">—</div>
-          </div>
-          <div class="metric">
-            <div class="k">Wind direction</div>
-            <div class="v"><span id="windDir">--</span></div>
-            <div class="s">From</div>
-          </div>
-          <div class="metric">
-            <div class="k">Gusts</div>
-            <div class="v"><span id="gust">--</span> km/h</div>
-            <div class="s">Peak gust</div>
-          </div>
-          <div class="metric">
-            <div class="k">Pressure</div>
-            <div class="v"><span id="press">--</span> hPa</div>
-            <div class="s">Sea-level</div>
-          </div>
+          <div class="h-strip" id="hourly"></div>
         </div>
+
+        <!-- PRECIP CHART -->
+        <div class="precip">
+          <div class="p-head">
+            <h2>Precipitation</h2>
+            <span class="pill">Next 12 Hours (mm)</span>
+          </div>
+          <div class="bars" id="bars"></div>
+          <div class="bar-labels" id="barLabels"></div>
+        </div>
+
       </div>
     </section>
 
-    <!-- 7 DAY -->
-    <aside class="card side">
+    <!-- RIGHT PANEL -->
+    <section class="card right">
       <div class="forecast">
         <div class="f-head">
-          <h2>7-day forecast</h2>
+          <h2>7-Day Forecast</h2>
           <span class="pill">High / Low</span>
         </div>
-        <div class="f-list" id="forecast"></div>
+        <div class="f-grid" id="forecast"></div>
       </div>
-    </aside>
+
+      <div class="stats" aria-label="Key stats">
+        <div class="stat">
+          <div class="k">Gusts</div>
+          <div class="v"><span id="gust">--</span> km/h</div>
+          <div class="s">Peak gust</div>
+        </div>
+        <div class="stat">
+          <div class="k">Pressure</div>
+          <div class="v"><span id="press">--</span> hPa</div>
+          <div class="s">Sea level</div>
+        </div>
+        <div class="stat">
+          <div class="k">Today precip</div>
+          <div class="v"><span id="todayP">--</span> mm</div>
+          <div class="s">Daily total</div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>
-    <div>Tip: looks best at 1080p landscape.</div>
+    <div>Powered by Open-Meteo • TV Weather Channel Style</div>
     <div id="status">—</div>
   </footer>
 
@@ -474,13 +633,13 @@
       const hh = String(d.getHours()).padStart(2,'0');
       const mm = String(d.getMinutes()).padStart(2,'0');
       document.getElementById('clock').childNodes[0].textContent = `${hh}:${mm}\n      `;
-      document.getElementById('clockDate').textContent = d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
+      document.getElementById('clockDate').textContent =
+        d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' }).toUpperCase();
     }
     tickClock(); setInterval(tickClock, 1000);
 
-    // --- Icon system (inline SVG) ---
-    function svgFor(code, size=96){
-      // Open-Meteo weather_code mapping buckets
+    // --- Icon system (inline SVG, more "TV" color pop) ---
+    function svgFor(code, size=110){
       const fog = [45,48];
       const drizzle = [51,53,55,56,57];
       const rain = [61,63,65,66,67,80,81,82];
@@ -500,9 +659,14 @@
 
       if(kind==="clear"){
         return base(`
-          <defs><linearGradient id="sun" x1="0" x2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#FFB020"/></linearGradient></defs>
+          <defs>
+            <radialGradient id="sun" cx="35%" cy="35%" r="70%">
+              <stop offset="0" stop-color="#FFF1B0"/>
+              <stop offset="1" stop-color="#FFB020"/>
+            </radialGradient>
+          </defs>
           <circle cx="32" cy="32" r="14" fill="url(#sun)"/>
-          <g stroke="#FFB020" stroke-width="2" stroke-linecap="round" opacity=".9">
+          <g stroke="#FFCF5A" stroke-width="2" stroke-linecap="round" opacity=".95">
             <path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>
             <path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>
           </g>
@@ -510,21 +674,33 @@
       }
       if(kind==="partly"){
         return base(`
-          <defs><linearGradient id="sun2" x1="0" x2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#FFB020"/></linearGradient></defs>
+          <defs>
+            <radialGradient id="sun2" cx="35%" cy="35%" r="70%">
+              <stop offset="0" stop-color="#FFF1B0"/>
+              <stop offset="1" stop-color="#FFB020"/>
+            </radialGradient>
+            <linearGradient id="cloud" x1="0" x2="1">
+              <stop offset="0" stop-color="#EAF2FF"/>
+              <stop offset="1" stop-color="#BFD8FF"/>
+            </linearGradient>
+          </defs>
           <circle cx="22" cy="24" r="10" fill="url(#sun2)"/>
-          <g fill="#E8F0FB">
-            <ellipse cx="36" cy="34" rx="18" ry="10"/>
+          <g fill="url(#cloud)">
+            <ellipse cx="38" cy="34" rx="18" ry="10"/>
             <ellipse cx="24" cy="38" rx="14" ry="8"/>
-          </g>
-          <g fill="#D7E5FA">
-            <ellipse cx="40" cy="38" rx="16" ry="9"/>
           </g>
         `);
       }
       if(kind==="fog"){
         return base(`
-          <rect x="8" y="14" width="48" height="36" rx="16" fill="#E8F0FB"/>
-          <g fill="#9AA7B6" opacity=".95">
+          <defs>
+            <linearGradient id="fg" x1="0" x2="1">
+              <stop offset="0" stop-color="#EAF2FF"/>
+              <stop offset="1" stop-color="#BFD8FF"/>
+            </linearGradient>
+          </defs>
+          <rect x="10" y="14" width="44" height="36" rx="16" fill="url(#fg)" opacity=".95"/>
+          <g fill="#9FB6D8" opacity=".98">
             <rect x="12" y="26" width="40" height="4" rx="2"/>
             <rect x="10" y="34" width="44" height="4" rx="2"/>
             <rect x="14" y="42" width="36" height="4" rx="2"/>
@@ -533,11 +709,17 @@
       }
       if(kind==="drizzle"){
         return base(`
-          <g fill="#E8F0FB">
+          <defs>
+            <linearGradient id="cloud2" x1="0" x2="1">
+              <stop offset="0" stop-color="#EAF2FF"/>
+              <stop offset="1" stop-color="#BFD8FF"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#cloud2)">
             <ellipse cx="36" cy="26" rx="18" ry="10"/>
             <ellipse cx="22" cy="30" rx="14" ry="8"/>
           </g>
-          <g fill="#6B7280" opacity=".9">
+          <g fill="#8AA6C8" opacity=".95">
             <rect x="22" y="40" width="4" height="10" rx="2"/>
             <rect x="32" y="40" width="4" height="10" rx="2"/>
             <rect x="42" y="40" width="4" height="10" rx="2"/>
@@ -546,11 +728,21 @@
       }
       if(kind==="rain"){
         return base(`
-          <g fill="#E8F0FB">
+          <defs>
+            <linearGradient id="cloud3" x1="0" x2="1">
+              <stop offset="0" stop-color="#EAF2FF"/>
+              <stop offset="1" stop-color="#BFD8FF"/>
+            </linearGradient>
+            <linearGradient id="drop" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#36C2FF"/>
+              <stop offset="1" stop-color="#2563EB"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#cloud3)">
             <ellipse cx="36" cy="24" rx="18" ry="10"/>
             <ellipse cx="22" cy="28" rx="14" ry="8"/>
           </g>
-          <g fill="#2563eb">
+          <g fill="url(#drop)">
             <path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
             <path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
             <path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
@@ -559,47 +751,63 @@
       }
       if(kind==="snow"){
         return base(`
-          <g fill="#E8F0FB">
+          <defs>
+            <linearGradient id="cloud4" x1="0" x2="1">
+              <stop offset="0" stop-color="#EAF2FF"/>
+              <stop offset="1" stop-color="#BFD8FF"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#cloud4)">
             <ellipse cx="36" cy="24" rx="18" ry="10"/>
             <ellipse cx="22" cy="28" rx="14" ry="8"/>
           </g>
-          <g fill="#64748b">
-            <circle cx="22" cy="46" r="2"/>
-            <circle cx="32" cy="50" r="2"/>
-            <circle cx="42" cy="46" r="2"/>
-            <circle cx="50" cy="50" r="2"/>
+          <g fill="#D7F0FF">
+            <circle cx="22" cy="46" r="2.2"/>
+            <circle cx="32" cy="50" r="2.2"/>
+            <circle cx="42" cy="46" r="2.2"/>
+            <circle cx="50" cy="50" r="2.2"/>
           </g>
         `);
       }
       if(kind==="thunder"){
         return base(`
-          <g fill="#E8F0FB">
+          <defs>
+            <linearGradient id="cloud5" x1="0" x2="1">
+              <stop offset="0" stop-color="#EAF2FF"/>
+              <stop offset="1" stop-color="#BFD8FF"/>
+            </linearGradient>
+            <linearGradient id="bolt" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#FFE08A"/>
+              <stop offset="1" stop-color="#FFB020"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#cloud5)">
             <ellipse cx="36" cy="24" rx="18" ry="10"/>
             <ellipse cx="22" cy="28" rx="14" ry="8"/>
           </g>
-          <polygon points="30,38 40,38 32,56 36,44 26,44" fill="#f59e0b"/>
+          <polygon points="30,38 40,38 32,56 36,44 26,44" fill="url(#bolt)"/>
         `);
       }
-      return base(`<rect x="10" y="10" width="44" height="44" rx="16" fill="#E8F0FB"/>`);
+      return base(`<rect x="10" y="10" width="44" height="44" rx="16" fill="#BFD8FF"/>`);
     }
 
     function weatherCodeToText(code){
       const map = {
-        0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",
-        45:"Fog",48:"Rime fog",
-        51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",56:"Freezing drizzle",57:"Heavy freezing drizzle",
-        61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Heavy freezing rain",
-        71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",
-        80:"Rain showers",81:"Showers",82:"Violent showers",
-        85:"Snow showers",86:"Heavy snow showers",
-        95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with heavy hail"
+        0:"CLEAR",1:"MOSTLY CLEAR",2:"PARTLY CLOUDY",3:"OVERCAST",
+        45:"FOG",48:"RIME FOG",
+        51:"LIGHT DRIZZLE",53:"DRIZZLE",55:"HEAVY DRIZZLE",56:"FREEZING DRIZZLE",57:"HEAVY FREEZING DRIZZLE",
+        61:"LIGHT RAIN",63:"RAIN",65:"HEAVY RAIN",66:"FREEZING RAIN",67:"HEAVY FREEZING RAIN",
+        71:"LIGHT SNOW",73:"SNOW",75:"HEAVY SNOW",77:"SNOW GRAINS",
+        80:"RAIN SHOWERS",81:"SHOWERS",82:"STRONG SHOWERS",
+        85:"SNOW SHOWERS",86:"HEAVY SNOW SHOWERS",
+        95:"THUNDERSTORM",96:"T-STORM WITH HAIL",99:"SEVERE T-STORM"
       };
-      return map[code] ?? `Weather (${code})`;
+      return map[code] ?? `WEATHER (${code})`;
     }
 
     function dayLabel(isoDate){
       const d = new Date(isoDate + "T00:00:00");
-      return d.toLocaleDateString([], { weekday: "short" }).toUpperCase();
+      return d.toLocaleDateString([], { weekday:"short" }).toUpperCase();
     }
 
     function windDirText(deg){
@@ -610,14 +818,28 @@
 
     function uvHint(uv){
       if(uv == null || isNaN(uv)) return "—";
-      if(uv < 3) return "Low";
-      if(uv < 6) return "Moderate";
-      if(uv < 8) return "High";
-      if(uv < 11) return "Very high";
-      return "Extreme";
+      if(uv < 3) return "LOW";
+      if(uv < 6) return "MOD";
+      if(uv < 8) return "HIGH";
+      if(uv < 11) return "V HIGH";
+      return "EXTREME";
     }
 
-    // Build hourly tiles (next 12 hours)
+    function headlineFor(c){
+      // quick TV-style banner based on conditions
+      const code = c.weather_code;
+      const wind = c.wind_speed_10m ?? 0;
+      const precip = c.precipitation ?? 0;
+
+      if([95,96,99].includes(code)) return "ALERT: THUNDERSTORM CONDITIONS";
+      if(precip >= 2) return "WET ROADS: MODERATE RAIN POSSIBLE";
+      if([71,73,75,85,86].includes(code)) return "WINTRY: SNOW SHOWERS IN THE AREA";
+      if([45,48].includes(code)) return "VISIBILITY: PATCHY FOG";
+      if(wind >= 35) return "BREEZY: GUSTY WINDS EXPECTED";
+      if(code === 0) return "CLEAR SKIES: GREAT CONDITIONS";
+      return "WEATHER UPDATE: STAY PREPARED";
+    }
+
     function renderHourly(data){
       const el = document.getElementById("hourly");
       el.innerHTML = "";
@@ -627,12 +849,10 @@
       const code = data.hourly.weather_code;
       const precip = data.hourly.precipitation;
 
-      // find the starting index closest to "now" in the room timezone (Open-Meteo returns times aligned to tz)
-      const now = new Date();
-      const nowISO = now.toISOString().slice(0,13); // rough matching by hour
+      const nowISO = new Date().toISOString().slice(0,13);
       let start = 0;
       for(let i=0;i<times.length;i++){
-        if(times[i].slice(0,13) >= nowISO){ start = i; break; }
+        if(times[i].slice(0,13) >= nowISO){ start=i; break; }
       }
 
       for(let i=start; i<Math.min(start+12, times.length); i++){
@@ -642,11 +862,41 @@
         item.className = "h-item";
         item.innerHTML = `
           <div class="h-time">${label}</div>
-          <div class="h-ico">${svgFor(code[i], 38)}</div>
+          <div class="h-ico">${svgFor(code[i], 40)}</div>
           <div class="h-temp">${Math.round(temp[i])}°</div>
-          <div class="h-mini">Precip ${((precip[i] ?? 0)).toFixed(1)} mm</div>
+          <div class="h-mini">P ${(precip[i] ?? 0).toFixed(1)} mm</div>
         `;
         el.appendChild(item);
+      }
+
+      // precip bars
+      const bars = document.getElementById("bars");
+      const labels = document.getElementById("barLabels");
+      bars.innerHTML = "";
+      labels.innerHTML = "";
+
+      // scale bar heights
+      const slice = [];
+      for(let i=start;i<Math.min(start+12,times.length);i++) slice.push(precip[i] ?? 0);
+      const max = Math.max(0.2, ...slice); // avoid zero max
+
+      for(let i=start; i<Math.min(start+12, times.length); i++){
+        const val = precip[i] ?? 0;
+        const h = Math.max(6, Math.round((val / max) * 130)); // 6px minimum
+        const b = document.createElement("div");
+        b.className = "bar";
+        b.style.height = `${h}px`;
+        // tint for heavier precip
+        if(val >= 2) b.style.background = "linear-gradient(180deg, rgba(255,176,32,.95), rgba(55,162,255,.22))";
+        else if(val >= 0.8) b.style.background = "linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
+        else b.style.background = "linear-gradient(180deg, rgba(121,199,255,.85), rgba(55,162,255,.12))";
+        bars.appendChild(b);
+
+        const t = new Date(times[i]);
+        const hh = t.toLocaleTimeString([], {hour:'2-digit'}).replace(/\s/g,'');
+        const lab = document.createElement("span");
+        lab.textContent = hh;
+        labels.appendChild(lab);
       }
     }
 
@@ -661,15 +911,21 @@
       const psum = data.daily.precipitation_sum;
 
       for(let i=0; i<Math.min(7, times.length); i++){
-        const row = document.createElement("div");
-        row.className = "f-row";
-        row.innerHTML = `
-          <div class="f-day">${dayLabel(times[i])}</div>
-          <div class="f-ico">${svgFor(code[i], 34)}</div>
-          <div class="f-desc">${weatherCodeToText(code[i])} • Precip ${(psum[i] ?? 0).toFixed(1)} mm</div>
+        const tile = document.createElement("div");
+        tile.className = "f-tile";
+        tile.innerHTML = `
+          <div>
+            <div class="f-day">${dayLabel(times[i])}</div>
+            <div class="f-sub">P ${(psum[i] ?? 0).toFixed(1)} mm</div>
+          </div>
+          <div class="f-ico">${svgFor(code[i], 36)}</div>
+          <div>
+            <div class="f-desc">${weatherCodeToText(code[i])}</div>
+            <div class="f-sub">${(psum[i] ?? 0) > 1 ? "WET PERIOD" : "LOW PRECIP"}</div>
+          </div>
           <div class="f-temps">${Math.round(tmax[i])}° / ${Math.round(tmin[i])}°</div>
         `;
-        el.appendChild(row);
+        el.appendChild(tile);
       }
     }
 
@@ -686,44 +942,50 @@
       const res = await fetch(url, { cache:"no-store" });
       if(!res.ok) throw new Error("Weather fetch failed");
       const data = await res.json();
-
       const c = data.current;
 
       document.getElementById("temp").textContent = Math.round(c.temperature_2m);
       document.getElementById("apparent").textContent = Math.round(c.apparent_temperature);
       document.getElementById("wind").textContent = Math.round(c.wind_speed_10m);
+      document.getElementById("windDir").textContent = windDirText(c.wind_direction_10m);
       document.getElementById("precip").textContent = (c.precipitation ?? 0).toFixed(1);
 
       document.getElementById("humidity").textContent = Math.round(c.relative_humidity_2m ?? 0);
       document.getElementById("cloud").textContent = Math.round(c.cloud_cover ?? 0);
       document.getElementById("uv").textContent = (c.uv_index ?? 0).toFixed(1);
       document.getElementById("uvHint").textContent = uvHint(c.uv_index);
-      document.getElementById("windDir").textContent = windDirText(c.wind_direction_10m);
+
       document.getElementById("gust").textContent = Math.round(c.wind_gusts_10m ?? 0);
       document.getElementById("press").textContent = Math.round(c.pressure_msl ?? 0);
 
       document.getElementById("wxText").textContent = weatherCodeToText(c.weather_code);
-      document.getElementById("wxIcon").innerHTML = svgFor(c.weather_code, 96);
+      document.getElementById("wxIcon").innerHTML = svgFor(c.weather_code, 118);
+      document.getElementById("headline").textContent = headlineFor(c);
+
+      // daily precip total for "today"
+      document.getElementById("todayP").textContent = (data.daily.precipitation_sum?.[0] ?? 0).toFixed(1);
 
       const updated = new Date(c.time);
       document.getElementById("wxUpdated").textContent =
-        `Updated ${updated.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+        `UPDATED ${updated.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
 
       renderHourly(data);
       renderForecast(data);
 
-      document.getElementById("status").textContent = "Online";
+      document.getElementById("status").textContent = "ONLINE";
     }
 
     async function init(){
       try{
         await loadWeather();
       }catch(e){
-        document.getElementById("status").textContent = "Weather unavailable (network blocked?)";
-        document.getElementById("wxText").textContent = "Unable to load weather";
+        document.getElementById("status").textContent = "OFFLINE / BLOCKED";
+        document.getElementById("wxText").textContent = "UNABLE TO LOAD WEATHER";
+        document.getElementById("headline").textContent = "CHECK NETWORK ACCESS TO api.open-meteo.com";
       }
       setInterval(() => loadWeather().catch(()=>{}), 5 * 60 * 1000);
     }
+
     init();
   </script>
 </body>
