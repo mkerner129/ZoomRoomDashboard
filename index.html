@@ -330,19 +330,21 @@
       text-transform:uppercase;
       color:#fff;
     }
-.bars{
-  display:flex;
-  align-items:flex-end;
-  gap:8px;
-  height:140px;
-  padding:10px 10px 6px;
-  border-radius:16px;
 
-  /* TV-style grid */
-  background:
-    linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
-    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
-}
+    /* ✅ OPTION 1 (Full replacement): TV-style grid behind precip bars */
+    .bars{
+      display:flex;
+      align-items:flex-end;
+      gap:8px;
+      height:140px;
+      padding:10px 10px 6px;
+      border-radius:16px;
+
+      background:
+        linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
+    }
+
     .bar{
       width:18px;
       border-radius: 10px;
@@ -832,7 +834,6 @@
     }
 
     function headlineFor(c){
-      // quick TV-style banner based on conditions
       const code = c.weather_code;
       const wind = c.wind_speed_10m ?? 0;
       const precip = c.precipitation ?? 0;
@@ -881,7 +882,6 @@
       bars.innerHTML = "";
       labels.innerHTML = "";
 
-      // scale bar heights
       const slice = [];
       for(let i=start;i<Math.min(start+12,times.length);i++) slice.push(precip[i] ?? 0);
       const max = Math.max(0.2, ...slice); // avoid zero max
@@ -889,13 +889,15 @@
       for(let i=start; i<Math.min(start+12, times.length); i++){
         const val = precip[i] ?? 0;
         const h = Math.max(6, Math.round((val / max) * 130)); // 6px minimum
+
         const b = document.createElement("div");
         b.className = "bar";
         b.style.height = `${h}px`;
-        // tint for heavier precip
+
         if(val >= 2) b.style.background = "linear-gradient(180deg, rgba(255,176,32,.95), rgba(55,162,255,.22))";
         else if(val >= 0.8) b.style.background = "linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
         else b.style.background = "linear-gradient(180deg, rgba(121,199,255,.85), rgba(55,162,255,.12))";
+
         bars.appendChild(b);
 
         const t = new Date(times[i]);
@@ -968,7 +970,6 @@
       document.getElementById("wxIcon").innerHTML = svgFor(c.weather_code, 118);
       document.getElementById("headline").textContent = headlineFor(c);
 
-      // daily precip total for "today"
       document.getElementById("todayP").textContent = (data.daily.precipitation_sum?.[0] ?? 0).toFixed(1);
 
       const updated = new Date(c.time);
