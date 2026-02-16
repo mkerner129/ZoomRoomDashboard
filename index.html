@@ -1,209 +1,136 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Live 1-Day Market Chart with Ticker (fixed)</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-  body { background: #f5f5f5; font-family: Arial, sans-serif; padding: 20px; }
-  .chart-container { width:100%; max-width:900px; margin:auto; background:white; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08);}
-  .ticker { text-align:center; font-size:1.2rem; font-weight:700; margin-bottom:12px; }
-  .up { color:#16a34a; } .down { color:#dc2626; }
-  .status { text-align:center; color:#666; margin-bottom:12px; }
-  .error { color:#b91c1c; text-align:center; font-weight:600; margin-bottom:12px; }
-  canvas { display:block; }
-</style>
-</head>
-<body>
-
-<div class="chart-container" role="region" aria-label="Market Chart">
-  <div id="ticker" class="ticker">Loading...</div>
-  <div id="status" class="status">Fetching data…</div>
-  <div id="err" class="error" style="display:none"></div>
-  <canvas id="marketChart" aria-label="S and P 500 chart"></canvas>
-</div>
-
-<script>
-/*
- - Robust fetch + timeout + error-handling
- - Handles nulls in price array
- - Quick dev-only CORS proxy toggle (not for production)
-*/
-
-const USE_PROXY_FOR_DEMO = false; // set true to test quickly (not recommended for production)
-const PROXY_PREFIX = 'https://api.allorigins.win/raw?url='; // simple public proxy for development only
-
-let marketChart = null;
-
-async function fetchWithTimeout(url, timeout = 8000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(id);
-    return resp;
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
-  }
-}
-
-async function fetchMarketData() {
-  const endpoint = 'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=5m&range=1d';
-  const url = USE_PROXY_FOR_DEMO ? (PROXY_PREFIX + encodeURIComponent(endpoint)) : endpoint;
-
-  // fetch
-  const resp = await fetchWithTimeout(url, 10000);
-  if (!resp.ok) {
-    throw new Error('Network response not OK: ' + resp.status + ' ' + resp.statusText);
-  }
-  const json = await resp.json();
-
-  // validate JSON shape
-  if (!json || !json.chart || !json.chart.result || !json.chart.result[0]) {
-    // if Yahoo returns an error structure, surface it
-    const errDesc = json && json.chart && json.chart.error && json.chart.error.description ? json.chart.error.description : 'Unexpected response structure';
-    throw new Error('Invalid data from API: ' + errDesc);
-  }
-
-  const result = json.chart.result[0];
-  const timestamps = result.timestamp || [];
-  const quote = (result.indicators && result.indicators.quote && result.indicators.quote[0]) || {};
-  const prices = quote.close || [];
-
-  if (!Array.isArray(timestamps) || !Array.isArray(prices) || timestamps.length === 0) {
-    throw new Error('Missing or empty data arrays in API response');
-  }
-
-  // Convert UNIX timestamps to labels (HH:MM)
-  const labels = timestamps.map(ts => {
-    const d = new Date(ts * 1000);
-    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-  });
-
-  // find first non-null price (opening) and last non-null price (latest)
-  const firstNonNullIdx = prices.findIndex(p => p !== null && p !== undefined);
-  const lastNonNullIdx = (() => {
-    for (let i = prices.length - 1; i >= 0; --i) {
-      if (prices[i] !== null && prices[i] !== undefined) return i;
-    }
-    return -1;
-  })();
-
-  if (firstNonNullIdx === -1 || lastNonNullIdx === -1) {
-    throw new Error('No valid price datapoints found (all null)');
-  }
-
-  const openingPrice = prices[firstNonNullIdx];
-  const latestPrice = prices[lastNonNullIdx];
-
-  // Clip labels and prices to same length (some APIs return different lengths)
-  const clippedLabels = labels.slice(0, prices.length);
-
-  // Return safe numeric values and data arrays for the chart
-  return {
-    labels: clippedLabels,
-    prices: prices,
-    openingPrice,
-    latestPrice,
-    change: latestPrice - openingPrice,
-    changePercent: (latestPrice - openingPrice) / openingPrice * 100
-  };
-}
-
-function displayError(message) {
-  const errEl = document.getElementById('err');
-  const statusEl = document.getElementById('status');
-  errEl.style.display = 'block';
-  errEl.textContent = message;
-  statusEl.textContent = '';
-  console.error(message);
-}
-
-function clearError() {
-  const errEl = document.getElementById('err');
-  errEl.style.display = 'none';
-  errEl.textContent = '';
-}
-
-async function renderChart() {
-  const statusEl = document.getElementById('status');
-  const tickerEl = document.getElementById('ticker');
-  statusEl.textContent = 'Fetching latest market data…';
-  clearError();
-
-  try {
-    const { labels, prices, latestPrice, change, changePercent } = await fetchMarketData();
-
-    // Update ticker
-    const sign = change >= 0 ? '+' : '';
-    tickerEl.innerHTML = `S&P 500: ${Number(latestPrice).toFixed(2)} <span class="${change >= 0 ? 'up' : 'down'}">(${sign}${change.toFixed(2)}, ${sign}${changePercent.toFixed(2)}%)</span>`;
-
-    statusEl.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-
-    // prepare data for chart: Chart.js expects numbers; convert nulls to NaN to keep data alignment but not plotted
-    const numericData = prices.map(p => (p === null || p === undefined) ? NaN : Number(p));
-
-    const ctx = document.getElementById('marketChart').getContext('2d');
-
-    if (!marketChart) {
-      marketChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'S&P 500',
-            data: numericData,
-            borderColor: '#0078d4',
-            backgroundColor: 'rgba(0,120,212,0.08)',
-            fill: true,
-            tension: 0.25,
-            pointRadius: 0,
-            spanGaps: false // do not connect nulls
-          }]
+<!-- TradingView Widget BEGIN -->
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/markets/" rel="noopener nofollow" target="_blank"><span class="blue-text">World markets</span></a><span class="trademark"> by TradingView</span></div>
+  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+  {
+  "colorTheme": "light",
+  "dateRange": "12M",
+  "locale": "en",
+  "largeChartUrl": "",
+  "isTransparent": false,
+  "showFloatingTooltip": false,
+  "plotLineColorGrowing": "rgba(41, 98, 255, 1)",
+  "plotLineColorFalling": "rgba(41, 98, 255, 1)",
+  "gridLineColor": "rgba(240, 243, 250, 0)",
+  "scaleFontColor": "#0F0F0F",
+  "belowLineFillColorGrowing": "rgba(41, 98, 255, 0.12)",
+  "belowLineFillColorFalling": "rgba(41, 98, 255, 0.12)",
+  "belowLineFillColorGrowingBottom": "rgba(41, 98, 255, 0)",
+  "belowLineFillColorFallingBottom": "rgba(41, 98, 255, 0)",
+  "symbolActiveColor": "rgba(41, 98, 255, 0.12)",
+  "tabs": [
+    {
+      "title": "Indices",
+      "symbols": [
+        {
+          "s": "FOREXCOM:SPXUSD",
+          "d": "S&P 500 Index"
         },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false }
-          },
-          interaction: { intersect: false, mode: 'index' },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxRotation: 0 } },
-            y: { grid: { color: '#eee' }, ticks: { beginAtZero: false } }
-          }
+        {
+          "s": "FOREXCOM:NSXUSD",
+          "d": "US 100 Cash CFD"
+        },
+        {
+          "s": "FOREXCOM:DJI",
+          "d": "Dow Jones Industrial Average Index"
+        },
+        {
+          "s": "INDEX:NKY",
+          "d": "Japan 225"
+        },
+        {
+          "s": "INDEX:DEU40",
+          "d": "DAX Index"
+        },
+        {
+          "s": "FOREXCOM:UKXGBP",
+          "d": "FTSE 100 Index"
         }
-      });
-    } else {
-      marketChart.data.labels = labels;
-      marketChart.data.datasets[0].data = numericData;
-      marketChart.update('none');
+      ],
+      "originalTitle": "Indices"
+    },
+    {
+      "title": "Futures",
+      "symbols": [
+        {
+          "s": "BMFBOVESPA:ISP1!",
+          "d": "S&P 500"
+        },
+        {
+          "s": "BMFBOVESPA:EUR1!",
+          "d": "Euro"
+        },
+        {
+          "s": "CMCMARKETS:GOLD",
+          "d": "Gold"
+        },
+        {
+          "s": "PYTH:WTI3!",
+          "d": "WTI Crude Oil"
+        },
+        {
+          "s": "BMFBOVESPA:CCM1!",
+          "d": "Corn"
+        }
+      ],
+      "originalTitle": "Futures"
+    },
+    {
+      "title": "Bonds",
+      "symbols": [
+        {
+          "s": "EUREX:FGBL1!",
+          "d": "Euro Bund"
+        },
+        {
+          "s": "EUREX:FBTP1!",
+          "d": "Euro BTP"
+        },
+        {
+          "s": "EUREX:FGBM1!",
+          "d": "Euro BOBL"
+        }
+      ],
+      "originalTitle": "Bonds"
+    },
+    {
+      "title": "Forex",
+      "symbols": [
+        {
+          "s": "FX:EURUSD",
+          "d": "EUR to USD"
+        },
+        {
+          "s": "FX:GBPUSD",
+          "d": "GBP to USD"
+        },
+        {
+          "s": "FX:USDJPY",
+          "d": "USD to JPY"
+        },
+        {
+          "s": "FX:USDCHF",
+          "d": "USD to CHF"
+        },
+        {
+          "s": "FX:AUDUSD",
+          "d": "AUD to USD"
+        },
+        {
+          "s": "FX:USDCAD",
+          "d": "USD to CAD"
+        }
+      ],
+      "originalTitle": "Forex"
     }
-
-  } catch (err) {
-    // display a friendly message to the user
-    const friendly = (err && err.name === 'AbortError') ? 'Request timed out. Try again.' : (err && err.message) ? err.message : 'Failed to fetch market data';
-    displayError('Error: ' + friendly);
-    document.getElementById('ticker').textContent = 'Data unavailable';
-  }
+  ],
+  "support_host": "https://www.tradingview.com",
+  "width": "400",
+  "height": "550",
+  "showSymbolLogo": true,
+  "showChart": true
 }
-
-// initial render
-renderChart();
-
-// periodic refresh every minute (only if the page is visible)
-let intervalId = setInterval(() => {
-  if (document.visibilityState === 'visible') renderChart();
-}, 60000);
-
-// optional: stop refreshing if the page is hidden for longer than 15 minutes (resource friendly)
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    // you could clearInterval here if you want to pause updates
-  }
-});
-</script>
-
-</body>
-</html>
+  </script>
+</div>
+<!-- TradingView Widget END -->
