@@ -34,7 +34,6 @@
     .title{font-size:22px;font-weight:800}
     .subtitle{color:var(--muted);font-size:14px;margin-top:4px}
     .clock{font-variant-numeric: tabular-nums;font-size:18px;font-weight:700}
-
     main{
       padding:18px 22px 26px;
       display:grid;
@@ -131,7 +130,9 @@
           </div>
 
           <div style="height:12px"></div>
+
           <div class="forecast" id="forecast"></div>
+
           <div class="foot">Weather data: Open-Meteo (no API key).</div>
         </div>
 
@@ -163,7 +164,7 @@
       </div>
 
       <div class="foot">
-        Data source: Stooq daily close via CORS proxy fallback chain. If it fails, the exact error shows above.
+        Markets data: Yahoo Finance chart endpoint (no API key). If it fails, the error shows above.
       </div>
     </section>
 
@@ -190,55 +191,19 @@
     </section>
   </main>
 
-  <!-- Chart.js for Markets chart (Option A: include date-fns BEFORE adapter) -->
+  <!-- Chart.js + time adapter (Option A: date-fns BEFORE adapter) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 
   <script>
     // -------------------------
-    // Error plumbing: always show JS errors in mkError
-    // -------------------------
-    function setMkError(msg){
-      const el = document.getElementById("mkError");
-      if (!el) return;
-      el.textContent = msg || "";
-    }
-
-    window.addEventListener("error", (ev) => {
-      const msg = `JavaScript error:\n${ev.message}\n\nSource: ${ev.filename}:${ev.lineno}:${ev.colno}`;
-      console.error(ev);
-      setMkError(msg);
-      const b = document.getElementById("mkUpdated");
-      if (b) b.textContent = "Markets unavailable";
-    });
-
-    window.addEventListener("unhandledrejection", (ev) => {
-      const msg = `Unhandled promise rejection:\n${(ev.reason && ev.reason.message) ? ev.reason.message : String(ev.reason)}`;
-      console.error(ev.reason);
-      setMkError(msg);
-      const b = document.getElementById("mkUpdated");
-      if (b) b.textContent = "Markets unavailable";
-    });
-
-    // -------------------------
     // Configuration
     // -------------------------
     const HALIFAX = { lat: 44.6488, lon: -63.5752, tz: "America/Halifax" };
     const LOCAL_RSS = "https://novascotia.ca/news/rss/";
     const WORLD_RSS = "https://feeds.bbci.co.uk/news/rss.xml?edition=int";
-
-    // Multiple proxy options (tries each until one works)
-    const CORS_PROXIES = [
-      // Jina AI renderer (often very reliable for raw text)
-      (url) => `https://r.jina.ai/http://${url.replace(/^https?:\/\//,'')}`,
-      (url) => `https://r.jina.ai/https://${url.replace(/^https?:\/\//,'')}`,
-
-      // Other public CORS proxies (availability varies by network)
-      (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-      (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      (url) => `https://cors.isomorphic-git.org/${url}`,
-    ];
+    const CORS_RAW = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 
     // Clock
     function tickClock(){
@@ -249,7 +214,7 @@
     }
     tickClock(); setInterval(tickClock, 1000);
 
-    // Inline SVG icons generator (lightweight)
+    // Inline SVG icons generator (simple, lightweight)
     function svgFor(code, size=84){
       const cloudy = [2,3];
       const fog = [45,48];
@@ -326,14 +291,34 @@
     // Weather mapping & UI update (Open-Meteo)
     function weatherCodeToText(code){
       const map = {
-        0:"Clear", 1:"Mainly clear", 2:"Partly cloudy", 3:"Overcast",
-        45:"Fog", 48:"Depositing rime fog",
-        51:"Light drizzle", 53:"Moderate drizzle", 55:"Dense drizzle", 56:"Freezing drizzle", 57:"Heavy freezing drizzle",
-        61:"Slight rain", 63:"Moderate rain", 65:"Heavy rain", 66:"Freezing rain", 67:"Heavy freezing rain",
-        71:"Slight snow", 73:"Moderate snow", 75:"Heavy snow", 77:"Snow grains",
-        80:"Rain showers", 81:"Moderate showers", 82:"Violent showers",
-        85:"Snow showers", 86:"Heavy snow showers",
-        95:"Thunderstorm", 96:"Thunderstorm with hail", 99:"Thunderstorm with heavy hail"
+        0:"Clear",
+        1:"Mainly clear",
+        2:"Partly cloudy",
+        3:"Overcast",
+        45:"Fog",
+        48:"Depositing rime fog",
+        51:"Light drizzle",
+        53:"Moderate drizzle",
+        55:"Dense drizzle",
+        56:"Freezing drizzle",
+        57:"Heavy freezing drizzle",
+        61:"Slight rain",
+        63:"Moderate rain",
+        65:"Heavy rain",
+        66:"Freezing rain",
+        67:"Heavy freezing rain",
+        71:"Slight snow",
+        73:"Moderate snow",
+        75:"Heavy snow",
+        77:"Snow grains",
+        80:"Rain showers",
+        81:"Moderate showers",
+        82:"Violent showers",
+        85:"Snow showers",
+        86:"Heavy snow showers",
+        95:"Thunderstorm",
+        96:"Thunderstorm with hail",
+        99:"Thunderstorm with heavy hail"
       };
       return map[code] ?? `Weather (${code})`;
     }
@@ -396,35 +381,15 @@
     }
 
     // -------------------------
-    // News (via CORS proxy chain too)
+    // News (RSS via allorigins)
     // -------------------------
     function stripHtml(s){ return (s ?? "").replace(/<[^>]*>/g,"").trim(); }
     function fmtTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 
-    async function fetchTextWithProxyChain(url){
-      // Try direct first (some sources allow CORS)
-      try{
-        const r = await fetch(url, { cache:"no-store" });
-        if(r.ok) return await r.text();
-        throw new Error(`Direct HTTP ${r.status} ${r.statusText}`);
-      }catch(directErr){
-        const errors = [`Direct failed: ${directErr?.message || directErr}`];
-        for(const makeProxyUrl of CORS_PROXIES){
-          const purl = makeProxyUrl(url);
-          try{
-            const r2 = await fetch(purl, { cache:"no-store" });
-            if(!r2.ok) throw new Error(`HTTP ${r2.status} ${r2.statusText}`);
-            return await r2.text();
-          }catch(e){
-            errors.push(`Proxy failed (${purl}): ${e?.message || e}`);
-          }
-        }
-        throw new Error(errors.join("\n"));
-      }
-    }
-
     async function fetchRssItems(rssUrl, maxItems=6){
-      const text = await fetchTextWithProxyChain(rssUrl);
+      const res = await fetch(CORS_RAW(rssUrl), {cache:"no-store"});
+      if(!res.ok) throw new Error("RSS fetch failed");
+      const text = await res.text();
       const xml = new DOMParser().parseFromString(text, "text/xml");
       const items = Array.from(xml.querySelectorAll("item")).slice(0,maxItems);
       if(items.length) return items.map(item=>({
@@ -445,11 +410,7 @@
       if(!items.length){ ul.innerHTML=`<li class="newsitem"><div class="muted">No headlines.</div></li>`; return; }
       items.forEach(it=>{
         const li=document.createElement('li'); li.className='newsitem';
-        let when = "";
-        if(it.pubDate){
-          const d=new Date(it.pubDate);
-          if(!isNaN(d)) when = d.toLocaleDateString([], {month:"short", day:"numeric"}) + " " + fmtTime(d);
-        }
+        let when = ""; if(it.pubDate){ const d=new Date(it.pubDate); if(!isNaN(d)) when = d.toLocaleDateString([], {month:"short", day:"numeric"}) + " " + fmtTime(d); }
         li.innerHTML = `<a href="${it.link}" target="_blank" rel="noreferrer">${it.title || "Untitled"}</a>
           <div class="newsmeta"><span>${when || "—"}</span><span style="margin-left:8px;color:var(--muted)">${new URL(it.link||"https://example.com").hostname.replace("www.","")}</span></div>`;
         ul.appendChild(li);
@@ -466,72 +427,68 @@
         renderNews("newsWorld", world);
         document.getElementById('newsUpdated').textContent = `Updated ${fmtTime(new Date())}`;
       }catch(e){
-        console.error(e);
         document.getElementById('newsUpdated').textContent = "News unavailable";
       }
     }
 
     // -------------------------
-    // Markets chart: Stooq via proxy chain + normalize + line
+    // Markets (Yahoo Finance)
     // -------------------------
     let mkChart;
 
-    async function fetchStooqDaily(symbol){
-      const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
-      const csv = await fetchTextWithProxyChain(url);
+    function setMkError(msg){
+      const el = document.getElementById("mkError");
+      if (!el) return;
+      el.textContent = msg || "";
+    }
 
-      const lines = csv.trim().split("\n");
-      if(lines.length < 3) throw new Error(`Stooq returned too little data for ${symbol}`);
-      const headers = lines[0].split(",");
-      const dateIdx = headers.indexOf("Date");
-      const closeIdx = headers.indexOf("Close");
-      if(dateIdx === -1 || closeIdx === -1) throw new Error(`Unexpected CSV format for ${symbol}`);
+    async function fetchYahoo(symbol) {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`Yahoo HTTP ${res.status}`);
 
-      const pts = [];
-      for(let i=1;i<lines.length;i++){
-        const cols = lines[i].split(",");
-        const d = cols[dateIdx];
-        const c = cols[closeIdx];
-        if(!d || !c) continue;
-        const close = Number(c);
-        if(!Number.isFinite(close)) continue;
-        pts.push({ x: new Date(d).getTime(), y: close });
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if (!result) throw new Error("Yahoo returned no result");
+
+      const timestamps = result.timestamp || [];
+      const closes = result?.indicators?.quote?.[0]?.close || [];
+      const points = [];
+
+      for (let i = 0; i < timestamps.length; i++) {
+        const t = timestamps[i] * 1000;
+        const c = closes[i];
+        if (c != null && Number.isFinite(c)) points.push({ x: t, y: c });
       }
-      pts.sort((a,b)=>a.x-b.x);
-      if(pts.length < 30) throw new Error(`Not enough parsed points for ${symbol} (${pts.length})`);
-      return pts;
+      points.sort((a,b)=>a.x-b.x);
+      if (points.length < 30) throw new Error("Not enough points returned");
+      return points;
     }
 
-    function rollingOneYear(points){
-      const now = Date.now();
-      const oneYearAgo = now - 365*24*60*60*1000;
-      return points.filter(p => p.x >= oneYearAgo && p.x <= now);
-    }
-
-    function normalizeTo100(points){
-      if(!points.length) return points;
+    function normalizeTo100(points) {
+      if (!points.length) return points;
       const base = points[0].y;
       return points.map(p => ({ x: p.x, y: (p.y / base) * 100 }));
     }
 
-    async function renderMarketsChart(){
+    async function renderMarketsChart() {
       const badge = document.getElementById("mkUpdated");
-      try{
+      try {
         if (badge) badge.textContent = "Updating…";
         setMkError("Loading markets…");
 
         const [spxRaw, djiRaw] = await Promise.all([
-          fetchStooqDaily("^spx"),
-          fetchStooqDaily("^dji"),
+          fetchYahoo("^GSPC"), // S&P 500
+          fetchYahoo("^DJI")   // Dow Jones
         ]);
 
-        const spx = normalizeTo100(rollingOneYear(spxRaw));
-        const dji = normalizeTo100(rollingOneYear(djiRaw));
+        const spx = normalizeTo100(spxRaw);
+        const dji = normalizeTo100(djiRaw);
 
         const canvas = document.getElementById("mkChart");
-        if(!canvas) throw new Error("Missing mkChart canvas");
+        if (!canvas) throw new Error("Missing mkChart canvas");
 
-        if(mkChart) mkChart.destroy();
+        if (mkChart) mkChart.destroy();
 
         mkChart = new Chart(canvas, {
           type: "line",
@@ -547,31 +504,18 @@
             animation: false,
             plugins: { legend: { display: true } },
             scales: {
-              x: {
-                type: "time",
-                time: { unit: "month" },
-                ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkip: true }
-              },
-              y: {
-                ticks: { display: false },
-                grid: { drawBorder: false }
-              }
+              x: { type: "time", time: { unit: "month" }, ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkip: true } },
+              y: { ticks: { display: false }, grid: { drawBorder: false } }
             }
           }
         });
 
         if (badge) badge.textContent = `Updated ${fmtTime(new Date())}`;
         setMkError("");
-      }catch(e){
-        console.error("Markets chart error:", e);
+      } catch (e) {
+        console.error("Markets error:", e);
         if (badge) badge.textContent = "Markets unavailable";
-        setMkError(
-          `Markets load failed.\n\n` +
-          `Error: ${e?.message || e}\n\n` +
-          `Direct links (should download):\n` +
-          `1) https://stooq.com/q/d/l/?s=%5Espx&i=d\n` +
-          `2) https://stooq.com/q/d/l/?s=%5Edji&i=d\n`
-        );
+        setMkError(`Markets load failed.\n\nError: ${e?.message || e}`);
       }
     }
 
@@ -579,14 +523,13 @@
     // Boot
     // -------------------------
     (async function init(){
-      setMkError("Loading markets…");
-
       try{ await loadWeather(); }catch(e){
         document.getElementById('wxText').textContent = "Weather unavailable";
       }
       try{ await loadNews(); }catch(e){}
 
-      await renderMarketsChart();
+      // Markets
+      try{ await renderMarketsChart(); }catch(e){}
 
       setInterval(()=>loadWeather().catch(()=>{}), 5*60*1000);
       setInterval(()=>loadNews().catch(()=>{}), 10*60*1000);
