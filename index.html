@@ -183,8 +183,9 @@
     </section>
   </main>
 
-  <!-- Chart.js for Markets chart -->
+  <!-- Chart.js for Markets chart (Option A: include date-fns BEFORE adapter) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 
   <script>
@@ -212,9 +213,6 @@
 
     // Inline SVG icons generator (simple, lightweight)
     function svgFor(code, size=84){
-      // Map Open-Meteo/WMO codes to simplified icon sets
-      // clear: 0,1 ; partly:2 ; overcast:3 ; fog:45,48 ; drizzle:51,53,55 ; rain:61,63,65,80,81,82
-      // snow:71,73,75,85,86 ; thunder:95,96,99
       const cloudy = [2,3];
       const fog = [45,48];
       const drizzle = [51,53,55,56,57];
@@ -233,7 +231,6 @@
       else if (code===0) kind="clear";
       else kind="clear";
 
-      // Simple SVGs (monochrome with accent)
       if(kind==="clear"){
         return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#FFDD57"/><stop offset="1" stop-color="#FFB020"/></linearGradient></defs>
@@ -286,41 +283,20 @@
           <polygon points="30,36 36,36 28,48 34,36 28,36" fill="#F59E0B"/>
         </svg>`;
       }
-      // fallback
       return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="64" height="64" rx="10" fill="#E6EEF8"/></svg>`;
     }
 
     // Weather mapping & UI update (Open-Meteo)
     function weatherCodeToText(code){
       const map = {
-        0:"Clear",
-        1:"Mainly clear",
-        2:"Partly cloudy",
-        3:"Overcast",
-        45:"Fog",
-        48:"Depositing rime fog",
-        51:"Light drizzle",
-        53:"Moderate drizzle",
-        55:"Dense drizzle",
-        56:"Freezing drizzle",
-        57:"Heavy freezing drizzle",
-        61:"Slight rain",
-        63:"Moderate rain",
-        65:"Heavy rain",
-        66:"Freezing rain",
-        67:"Heavy freezing rain",
-        71:"Slight snow",
-        73:"Moderate snow",
-        75:"Heavy snow",
-        77:"Snow grains",
-        80:"Rain showers",
-        81:"Moderate showers",
-        82:"Violent showers",
-        85:"Snow showers",
-        86:"Heavy snow showers",
-        95:"Thunderstorm",
-        96:"Thunderstorm with hail",
-        99:"Thunderstorm with heavy hail"
+        0:"Clear", 1:"Mainly clear", 2:"Partly cloudy", 3:"Overcast",
+        45:"Fog", 48:"Depositing rime fog",
+        51:"Light drizzle", 53:"Moderate drizzle", 55:"Dense drizzle", 56:"Freezing drizzle", 57:"Heavy freezing drizzle",
+        61:"Slight rain", 63:"Moderate rain", 65:"Heavy rain", 66:"Freezing rain", 67:"Heavy freezing rain",
+        71:"Slight snow", 73:"Moderate snow", 75:"Heavy snow", 77:"Snow grains",
+        80:"Rain showers", 81:"Moderate showers", 82:"Violent showers",
+        85:"Snow showers", 86:"Heavy snow showers",
+        95:"Thunderstorm", 96:"Thunderstorm with hail", 99:"Thunderstorm with heavy hail"
       };
       return map[code] ?? `Weather (${code})`;
     }
@@ -353,10 +329,8 @@
       document.getElementById('wxText').textContent = weatherCodeToText(c.weather_code);
       document.getElementById('wxUpdated').textContent = `Updated ${new Date(c.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
 
-      // icon
       document.getElementById('wxIcon').innerHTML = svgFor(c.weather_code, 84);
 
-      // forecast
       const f = document.getElementById('forecast');
       f.innerHTML = "";
       const times = data.daily.time;
@@ -464,7 +438,7 @@
     let mkChart;
 
     async function fetchStooqDaily(symbol){
-      const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`; // daily CSV
+      const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
       const res = await fetch(CORS_RAW(url), { cache: "no-store" });
       if(!res.ok) throw new Error(`Stooq fetch failed for ${symbol}`);
       const csv = await res.text();
@@ -506,8 +480,6 @@
       try{
         if (badge) badge.textContent = "Updating…";
 
-        // Stooq symbols:
-        // ^SPX = S&P 500 index, ^DJI = Dow Jones Industrial Average
         const [spxRaw, djiRaw] = await Promise.all([
           fetchStooqDaily("^spx"),
           fetchStooqDaily("^dji"),
@@ -546,7 +518,7 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: false, // good for kiosk displays
+            animation: false,
             plugins: {
               legend: { display: true }
             },
@@ -566,6 +538,7 @@
 
         if (badge) badge.textContent = `Updated ${fmtTime(new Date())}`;
       }catch(e){
+        console.error("Markets chart error:", e);
         if (badge) badge.textContent = "Markets unavailable";
       }
     }
@@ -582,13 +555,11 @@
 
       try{ await loadNews(); }catch(e){}
 
-      // Markets chart
       renderMarketsChart().catch(()=>{});
 
-      // Refresh loops
       setInterval(()=>loadWeather().catch(()=>{}), 5*60*1000);
       setInterval(()=>loadNews().catch(()=>{}), 10*60*1000);
-      setInterval(()=>renderMarketsChart().catch(()=>{}), 60*60*1000); // hourly (daily data anyway)
+      setInterval(()=>renderMarketsChart().catch(()=>{}), 60*60*1000);
     })();
   </script>
 </body>
