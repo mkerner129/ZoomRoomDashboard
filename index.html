@@ -197,47 +197,53 @@
     .p-head h2{margin:0;font-size:14px;font-weight:950;letter-spacing:.8px;text-transform:uppercase;color:#fff;}
 
     /* TV grid */
-    .bars{
-      display:flex;align-items:flex-end;gap:8px;height:140px;
-      padding:10px 10px 6px;border-radius:16px;
-      background:
-        linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
-        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
-      overflow:hidden;
-    }
+.bars{
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: end;
+  gap: 8px;
 
-    .bar{
-      width:22px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow: 0 10px 18px rgba(0,0,0,.22);
-      position:relative;overflow:hidden;
-      background: linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12));
-    }
+  height: 140px;
+  padding: 10px 10px 6px;
+  border-radius: 16px;
+
+  background:
+    linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
+}
+
+.bar{
+  width: 100%;              /* Fill grid column */
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 18px rgba(0,0,0,.22);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12));
+}
     .bar::after{
       content:"";position:absolute;inset:0;
       background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%);
       opacity:.9;
     }
 
-    .bar-labels{
-      display:flex;
-      gap:8px;
-      margin-top:6px;
-      color:var(--muted);
-      font-size:10px;
-      font-weight:950;
-      letter-spacing:.6px;
-      text-transform:uppercase;
-      overflow:hidden;
-    }
-    .bar-labels span{
-      width:22px;
-      text-align:center;
-      flex:0 0 auto;
-      opacity:.92;
-      min-height: 12px;
-    }
+.bar-labels{
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 8px;
+
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+.bar-labels span{
+  text-align: center;
+}
+
 
     .right{height:100%;display:grid;grid-template-rows:1fr auto;gap:16px;min-height:0;}
     .forecast{padding:18px;min-height:0;display:flex;flex-direction:column;gap:12px;}
