@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Halifax Weather Outlook</title>
+  <style>
+    :root{
+      --bg1:#eef6ff;
+      --bg2:#f8fbff;
+      --card:#ffffffcc;
+      --card2:#ffffffee;
+      --text:#0f172a;
+      --muted:#475569;
+      --border:rgba(226,232,240,.8);
+      --shadow:0 14px 34px rgba(2,6,23,.12);
+      --shadow2:0 8px 18px rgba(2,6,23,.10);
+      --accent:#2563eb;
+      --good:#16a34a;
+      --warn:#d97706;
+      --bad:#dc2626;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1100px 700px at 15% 20%, rgba(37,99,235,.18), transparent 60%),
+        radial-gradient(900px 650px at 85% 10%, rgba(56,189,248,.20), transparent 55%),
+        radial-gradient(900px 650px at 70% 90%, rgba(99,102,241,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow:hidden;
+    }
+
+    /* subtle animated “cloud” blobs */
+    .blob{
+      position:absolute; inset:auto;
+      width:520px; height:520px;
+      filter: blur(40px);
+      opacity:.25;
+      border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.9), rgba(255,255,255,.0) 70%);
+      animation: floaty 16s ease-in-out infinite;
+      pointer-events:none;
+    }
+    .blob.b1{top:-160px; left:-140px; animation-duration: 18s;}
+    .blob.b2{top:-180px; right:-180px; animation-duration: 22s; opacity:.20;}
+    .blob.b3{bottom:-220px; left:35%; animation-duration: 20s; opacity:.18;}
+    @keyframes floaty{
+      0%,100%{transform: translate(0,0) scale(1)}
+      50%{transform: translate(24px,18px) scale(1.03)}
+    }
+
+    header{
+      position:relative;
+      padding:26px 28px 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:16px;
+    }
+    .title{
+      font-size:30px;
+      font-weight:900;
+      letter-spacing:-.6px;
+      line-height:1.1;
+    }
+    .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background:rgba(255,255,255,.65);
+      backdrop-filter: blur(6px);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .clock{
+      font-variant-numeric: tabular-nums;
+      text-align:right;
+      font-weight:900;
+      font-size:22px;
+      letter-spacing:-.3px;
+    }
+    .clock small{
+      display:block;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:700;
+    }
+
+    main{
+      position:relative;
+      padding:0 28px 26px;
+      display:grid;
+      grid-template-columns: 1.35fr .95fr;
+      gap:16px;
+      height: calc(100% - 96px);
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+    .card-inner{
+      padding:18px;
+    }
+
+    /* big now section */
+    .now{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap:16px;
+      height:100%;
+    }
+    .hero{
+      background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.70));
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:var(--shadow2);
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      min-height:0;
+    }
+    .hero-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+    }
+    .hero-temp{
+      font-size:74px;
+      font-weight:950;
+      letter-spacing:-2px;
+      line-height:1;
+      margin-top:2px;
+    }
+    .hero-desc{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:16px;
+      font-weight:700;
+    }
+    .hero-meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .icon-wrap{
+      width:110px;
+      height:110px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:20px;
+      background:rgba(255,255,255,.55);
+      border:1px solid var(--border);
+    }
+
+    /* metrics */
+    .metrics{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      align-content:start;
+    }
+    .metric{
+      background:rgba(255,255,255,.78);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:12px;
+      box-shadow:var(--shadow2);
+      min-height:78px;
+    }
+    .metric .k{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+    }
+    .metric .v{
+      margin-top:8px;
+      font-size:20px;
+      font-weight:950;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric .s{
+      margin-top:4px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+
+    /* hourly */
+    .hourly{
+      margin-top:14px;
+      background:rgba(255,255,255,.72);
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:14px;
+      box-shadow:var(--shadow2);
+      min-height:0;
+    }
+    .h-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .h-title h2{
+      margin:0;
+      font-size:14px;
+      font-weight:950;
+      letter-spacing:-.2px;
+    }
+    .h-scroller{
+      display:flex;
+      gap:10px;
+      overflow:hidden;
+    }
+    .h-item{
+      flex: 0 0 auto;
+      width:96px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:10px 10px 8px;
+      background:rgba(255,255,255,.82);
+      text-align:center;
+    }
+    .h-time{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      letter-spacing:.3px;
+    }
+    .h-ico{height:40px; display:flex; align-items:center; justify-content:center; margin:6px 0;}
+    .h-temp{
+      font-size:16px;
+      font-weight:950;
+      font-variant-numeric: tabular-nums;
+    }
+    .h-mini{
+      margin-top:4px;
+      font-size:11px;
+      color:var(--muted);
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* 7-day forecast */
+    .side{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      min-height:0;
+    }
+    .forecast{
+      padding:18px;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .f-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .f-head h2{
+      margin:0;
+      font-size:14px;
+      font-weight:950;
+      letter-spacing:-.2px;
+    }
+    .f-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:hidden;
+      flex:1 1 auto;
+      min-height:0;
+    }
+    .f-row{
+      display:grid;
+      grid-template-columns: 72px 42px 1fr auto;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:rgba(255,255,255,.78);
+      box-shadow:var(--shadow2);
+    }
+    .f-day{
+      font-weight:950;
+      font-size:13px;
+      letter-spacing:.2px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+    .f-ico{display:flex; align-items:center; justify-content:center}
+    .f-desc{
+      font-size:13px;
+      font-weight:800;
+      color:var(--text);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .f-temps{
+      font-weight:950;
+      font-variant-numeric: tabular-nums;
+      font-size:14px;
+      white-space:nowrap;
+    }
+
+    footer{
+      position:absolute;
+      left:28px;
+      right:28px;
+      bottom:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:700;
+      pointer-events:none;
+    }
+
+    @media (max-width: 1200px){
+      main{grid-template-columns:1fr; height:auto; overflow:auto}
+      body{overflow:auto}
+      .now{grid-template-columns:1fr}
+      footer{position:static; padding:12px 28px 18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+
+  <header>
+    <div>
+      <div class="title">Halifax Weather Outlook</div>
+      <div class="sub">
+        <span class="pill" id="wxUpdated">Updating…</span>
+        <span class="pill" id="wxSource">Source: Open-Meteo</span>
+        <span class="pill" id="wxNote">Auto refresh: 5 min</span>
+      </div>
+    </div>
+    <div class="clock" id="clock">
+      --:--
+      <small id="clockDate">—</small>
+    </div>
+  </header>
+
+  <main>
+    <!-- NOW + HOURLY -->
+    <section class="card">
+      <div class="card-inner now">
+        <div class="hero">
+          <div class="hero-top">
+            <div>
+              <div class="hero-temp"><span id="temp">--</span>°C</div>
+              <div class="hero-desc" id="wxText">Loading…</div>
+              <div class="hero-meta">
+                <span class="pill">Feels like <b id="apparent">--</b>°C</span>
+                <span class="pill">Wind <b id="wind">--</b> km/h</span>
+                <span class="pill">Precip <b id="precip">--</b> mm</span>
+              </div>
+            </div>
+            <div class="icon-wrap" id="wxIcon" aria-hidden="true"></div>
+          </div>
+
+          <div class="hourly">
+            <div class="h-title">
+              <h2>Next 12 hours</h2>
+              <span class="pill">Local time</span>
+            </div>
+            <div class="h-scroller" id="hourly"></div>
+          </div>
+        </div>
+
+        <div class="metrics" aria-label="Weather metrics">
+          <div class="metric">
+            <div class="k">Humidity</div>
+            <div class="v"><span id="humidity">--</span>%</div>
+            <div class="s">Relative humidity</div>
+          </div>
+          <div class="metric">
+            <div class="k">Cloud cover</div>
+            <div class="v"><span id="cloud">--</span>%</div>
+            <div class="s">Sky coverage</div>
+          </div>
+          <div class="metric">
+            <div class="k">UV index</div>
+            <div class="v"><span id="uv">--</span></div>
+            <div class="s" id="uvHint">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">Wind direction</div>
+            <div class="v"><span id="windDir">--</span></div>
+            <div class="s">From</div>
+          </div>
+          <div class="metric">
+            <div class="k">Gusts</div>
+            <div class="v"><span id="gust">--</span> km/h</div>
+            <div class="s">Peak gust</div>
+          </div>
+          <div class="metric">
+            <div class="k">Pressure</div>
+            <div class="v"><span id="press">--</span> hPa</div>
+            <div class="s">Sea-level</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 DAY -->
+    <aside class="card side">
+      <div class="forecast">
+        <div class="f-head">
+          <h2>7-day forecast</h2>
+          <span class="pill">High / Low</span>
+        </div>
+        <div class="f-list" id="forecast"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <div>Tip: looks best at 1080p landscape.</div>
+    <div id="status">—</div>
+  </footer>
+
+  <script>
+    // Halifax coords
+    const HALIFAX = { lat: 44.6488, lon: -63.5752, tz: "America/Halifax" };
+
+    function tickClock(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('clock').childNodes[0].textContent = `${hh}:${mm}\n      `;
+      document.getElementById('clockDate').textContent = d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
+    }
+    tickClock(); setInterval(tickClock, 1000);
+
+    // --- Icon system (inline SVG) ---
+    function svgFor(code, size=96){
+      // Open-Meteo weather_code mapping buckets
+      const fog = [45,48];
+      const drizzle = [51,53,55,56,57];
+      const rain = [61,63,65,66,67,80,81,82];
+      const snow = [71,73,75,77,85,86];
+      const thunder = [95,96,99];
+
+      let kind="clear";
+      if(fog.includes(code)) kind="fog";
+      else if(drizzle.includes(code)) kind="drizzle";
+      else if(rain.includes(code)) kind="rain";
+      else if(snow.includes(code)) kind="snow";
+      else if(thunder.includes(code)) kind="thunder";
+      else if(code===2 || code===3 || code===1) kind="partly";
+      else kind="clear";
+
+      const base = (inner) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+
+      if(kind==="clear"){
+        return base(`
+          <defs><linearGradient id="sun" x1="0" x2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#FFB020"/></linearGradient></defs>
+          <circle cx="32" cy="32" r="14" fill="url(#sun)"/>
+          <g stroke="#FFB020" stroke-width="2" stroke-linecap="round" opacity=".9">
+            <path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>
+            <path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>
+          </g>
+        `);
+      }
+      if(kind==="partly"){
+        return base(`
+          <defs><linearGradient id="sun2" x1="0" x2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#FFB020"/></linearGradient></defs>
+          <circle cx="22" cy="24" r="10" fill="url(#sun2)"/>
+          <g fill="#E8F0FB">
+            <ellipse cx="36" cy="34" rx="18" ry="10"/>
+            <ellipse cx="24" cy="38" rx="14" ry="8"/>
+          </g>
+          <g fill="#D7E5FA">
+            <ellipse cx="40" cy="38" rx="16" ry="9"/>
+          </g>
+        `);
+      }
+      if(kind==="fog"){
+        return base(`
+          <rect x="8" y="14" width="48" height="36" rx="16" fill="#E8F0FB"/>
+          <g fill="#9AA7B6" opacity=".95">
+            <rect x="12" y="26" width="40" height="4" rx="2"/>
+            <rect x="10" y="34" width="44" height="4" rx="2"/>
+            <rect x="14" y="42" width="36" height="4" rx="2"/>
+          </g>
+        `);
+      }
+      if(kind==="drizzle"){
+        return base(`
+          <g fill="#E8F0FB">
+            <ellipse cx="36" cy="26" rx="18" ry="10"/>
+            <ellipse cx="22" cy="30" rx="14" ry="8"/>
+          </g>
+          <g fill="#6B7280" opacity=".9">
+            <rect x="22" y="40" width="4" height="10" rx="2"/>
+            <rect x="32" y="40" width="4" height="10" rx="2"/>
+            <rect x="42" y="40" width="4" height="10" rx="2"/>
+          </g>
+        `);
+      }
+      if(kind==="rain"){
+        return base(`
+          <g fill="#E8F0FB">
+            <ellipse cx="36" cy="24" rx="18" ry="10"/>
+            <ellipse cx="22" cy="28" rx="14" ry="8"/>
+          </g>
+          <g fill="#2563eb">
+            <path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+            <path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+            <path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+          </g>
+        `);
+      }
+      if(kind==="snow"){
+        return base(`
+          <g fill="#E8F0FB">
+            <ellipse cx="36" cy="24" rx="18" ry="10"/>
+            <ellipse cx="22" cy="28" rx="14" ry="8"/>
+          </g>
+          <g fill="#64748b">
+            <circle cx="22" cy="46" r="2"/>
+            <circle cx="32" cy="50" r="2"/>
+            <circle cx="42" cy="46" r="2"/>
+            <circle cx="50" cy="50" r="2"/>
+          </g>
+        `);
+      }
+      if(kind==="thunder"){
+        return base(`
+          <g fill="#E8F0FB">
+            <ellipse cx="36" cy="24" rx="18" ry="10"/>
+            <ellipse cx="22" cy="28" rx="14" ry="8"/>
+          </g>
+          <polygon points="30,38 40,38 32,56 36,44 26,44" fill="#f59e0b"/>
+        `);
+      }
+      return base(`<rect x="10" y="10" width="44" height="44" rx="16" fill="#E8F0FB"/>`);
+    }
+
+    function weatherCodeToText(code){
+      const map = {
+        0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",
+        45:"Fog",48:"Rime fog",
+        51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",56:"Freezing drizzle",57:"Heavy freezing drizzle",
+        61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Heavy freezing rain",
+        71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",
+        80:"Rain showers",81:"Showers",82:"Violent showers",
+        85:"Snow showers",86:"Heavy snow showers",
+        95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with heavy hail"
+      };
+      return map[code] ?? `Weather (${code})`;
+    }
+
+    function dayLabel(isoDate){
+      const d = new Date(isoDate + "T00:00:00");
+      return d.toLocaleDateString([], { weekday: "short" }).toUpperCase();
+    }
+
+    function windDirText(deg){
+      if(deg==null || isNaN(deg)) return "—";
+      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+      return dirs[Math.round(deg/22.5) % 16];
+    }
+
+    function uvHint(uv){
+      if(uv == null || isNaN(uv)) return "—";
+      if(uv < 3) return "Low";
+      if(uv < 6) return "Moderate";
+      if(uv < 8) return "High";
+      if(uv < 11) return "Very high";
+      return "Extreme";
+    }
+
+    // Build hourly tiles (next 12 hours)
+    function renderHourly(data){
+      const el = document.getElementById("hourly");
+      el.innerHTML = "";
+
+      const times = data.hourly.time;
+      const temp = data.hourly.temperature_2m;
+      const code = data.hourly.weather_code;
+      const precip = data.hourly.precipitation;
+
+      // find the starting index closest to "now" in the room timezone (Open-Meteo returns times aligned to tz)
+      const now = new Date();
+      const nowISO = now.toISOString().slice(0,13); // rough matching by hour
+      let start = 0;
+      for(let i=0;i<times.length;i++){
+        if(times[i].slice(0,13) >= nowISO){ start = i; break; }
+      }
+
+      for(let i=start; i<Math.min(start+12, times.length); i++){
+        const t = new Date(times[i]);
+        const label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const item = document.createElement("div");
+        item.className = "h-item";
+        item.innerHTML = `
+          <div class="h-time">${label}</div>
+          <div class="h-ico">${svgFor(code[i], 38)}</div>
+          <div class="h-temp">${Math.round(temp[i])}°</div>
+          <div class="h-mini">Precip ${((precip[i] ?? 0)).toFixed(1)} mm</div>
+        `;
+        el.appendChild(item);
+      }
+    }
+
+    function renderForecast(data){
+      const el = document.getElementById("forecast");
+      el.innerHTML = "";
+
+      const times = data.daily.time;
+      const tmax = data.daily.temperature_2m_max;
+      const tmin = data.daily.temperature_2m_min;
+      const code = data.daily.weather_code;
+      const psum = data.daily.precipitation_sum;
+
+      for(let i=0; i<Math.min(7, times.length); i++){
+        const row = document.createElement("div");
+        row.className = "f-row";
+        row.innerHTML = `
+          <div class="f-day">${dayLabel(times[i])}</div>
+          <div class="f-ico">${svgFor(code[i], 34)}</div>
+          <div class="f-desc">${weatherCodeToText(code[i])} • Precip ${(psum[i] ?? 0).toFixed(1)} mm</div>
+          <div class="f-temps">${Math.round(tmax[i])}° / ${Math.round(tmin[i])}°</div>
+        `;
+        el.appendChild(row);
+      }
+    }
+
+    async function loadWeather(){
+      const {lat, lon, tz} = HALIFAX;
+
+      const url =
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,cloud_cover,uv_index,pressure_msl` +
+        `&hourly=temperature_2m,weather_code,precipitation` +
+        `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum` +
+        `&timezone=${encodeURIComponent(tz)}`;
+
+      const res = await fetch(url, { cache:"no-store" });
+      if(!res.ok) throw new Error("Weather fetch failed");
+      const data = await res.json();
+
+      const c = data.current;
+
+      document.getElementById("temp").textContent = Math.round(c.temperature_2m);
+      document.getElementById("apparent").textContent = Math.round(c.apparent_temperature);
+      document.getElementById("wind").textContent = Math.round(c.wind_speed_10m);
+      document.getElementById("precip").textContent = (c.precipitation ?? 0).toFixed(1);
+
+      document.getElementById("humidity").textContent = Math.round(c.relative_humidity_2m ?? 0);
+      document.getElementById("cloud").textContent = Math.round(c.cloud_cover ?? 0);
+      document.getElementById("uv").textContent = (c.uv_index ?? 0).toFixed(1);
+      document.getElementById("uvHint").textContent = uvHint(c.uv_index);
+      document.getElementById("windDir").textContent = windDirText(c.wind_direction_10m);
+      document.getElementById("gust").textContent = Math.round(c.wind_gusts_10m ?? 0);
+      document.getElementById("press").textContent = Math.round(c.pressure_msl ?? 0);
+
+      document.getElementById("wxText").textContent = weatherCodeToText(c.weather_code);
+      document.getElementById("wxIcon").innerHTML = svgFor(c.weather_code, 96);
+
+      const updated = new Date(c.time);
+      document.getElementById("wxUpdated").textContent =
+        `Updated ${updated.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+
+      renderHourly(data);
+      renderForecast(data);
+
+      document.getElementById("status").textContent = "Online";
+    }
+
+    async function init(){
+      try{
+        await loadWeather();
+      }catch(e){
+        document.getElementById("status").textContent = "Weather unavailable (network blocked?)";
+        document.getElementById("wxText").textContent = "Unable to load weather";
+      }
+      setInterval(() => loadWeather().catch(()=>{}), 5 * 60 * 1000);
+    }
+    init();
+  </script>
+</body>
+</html>
