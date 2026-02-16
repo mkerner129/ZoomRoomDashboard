@@ -79,17 +79,25 @@
     /* Ticker */
     #tv-ticker{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
 
-    /* Markets compare chart (TradingView) */
+    /* Markets chart */
     .markets-chart{
       border:1px solid var(--border);
       border-radius:14px;
       background:#fff;
       padding:12px;
-      height:220px;
+      height:240px;
     }
-    .markets-chart .tradingview-widget-container,
-    .markets-chart .tradingview-widget-container__widget{
-      height: 170px; /* leaves room for header row */
+    .mk-error{
+      margin-top:8px;
+      padding:8px 10px;
+      border:1px dashed var(--border);
+      border-radius:12px;
+      font-size:12px;
+      color:var(--muted);
+      background:#fff;
+      white-space:pre-wrap;
+      word-break:break-word;
+      display:none;
     }
 
     .foot{margin-top:10px;font-size:12px;color:var(--muted)}
@@ -124,7 +132,9 @@
           </div>
 
           <div style="height:12px"></div>
+
           <div class="forecast" id="forecast"></div>
+
           <div class="foot">Weather data: Open-Meteo (no API key).</div>
         </div>
 
@@ -153,16 +163,13 @@
       <div class="markets-chart">
         <div class="row" style="justify-content:space-between;margin-bottom:8px;align-items:center">
           <div style="font-weight:900">S&P 500 vs Dow (1Y, normalized)</div>
-          <div class="badge" id="mkUpdated">Live</div>
+          <div class="badge" id="mkUpdated">Updating…</div>
         </div>
-
-        <!-- TradingView compare chart container -->
-        <div class="tradingview-widget-container" id="tv-compare">
-          <div class="tradingview-widget-container__widget"></div>
-        </div>
+        <canvas id="mkChart"></canvas>
+        <div class="mk-error" id="mkError"></div>
       </div>
 
-      <div class="foot">This chart uses TradingView’s built-in comparison (percentage scale) locked to 12 months.</div>
+      <div class="foot">Data source: Stooq daily close. If it fails, the error details will show above.</div>
     </section>
 
     <!-- NEWS -->
@@ -188,6 +195,11 @@
     </section>
   </main>
 
+  <!-- Chart.js for Markets chart (Option A: include date-fns BEFORE adapter) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+
   <script>
     // -------------------------
     // Configuration
@@ -211,7 +223,9 @@
     }
     tickClock(); setInterval(tickClock, 1000);
 
-    // Inline SVG icons generator (simple, lightweight)
+    // -------------------------
+    // Weather icons
+    // -------------------------
     function svgFor(code, size=84){
       const cloudy = [2,3];
       const fog = [45,48];
@@ -229,7 +243,6 @@
       else if (cloudy.includes(code)) kind="partly";
       else if (code===1) kind="partly";
       else if (code===0) kind="clear";
-      else kind="clear";
 
       if(kind==="clear"){
         return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -410,7 +423,7 @@
     }
 
     // -------------------------
-    // TradingView widgets
+    // TradingView ticker (keep; if it fails on your network, remove it)
     // -------------------------
     function addTradingViewTicker(){
       const container = document.getElementById("tv-ticker"); container.innerHTML="";
@@ -428,76 +441,153 @@
       container.appendChild(s);
     }
 
-    // Comparison chart: normalized (% scale) and locked to 12 months (rolling 1Y).
-    function addTradingViewCompareChart(){
-      const host = document.getElementById("tv-compare");
-      if(!host) return;
+    // -------------------------
+    // Markets chart: rolling 1Y, normalized, line
+    // -------------------------
+    let mkChart;
 
-      // clear any previous widget
-      host.innerHTML = `<div class="tradingview-widget-container__widget"></div>`;
+    function showMkError(msg){
+      const el = document.getElementById("mkError");
+      if(!el) return;
+      el.style.display = msg ? "block" : "none";
+      el.textContent = msg || "";
+    }
 
-      const s = document.createElement("script");
-      s.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
-      s.async = true;
+    async function fetchTextWithFallback(directUrl){
+      // Try direct first
+      try{
+        const r = await fetch(directUrl, { cache:"no-store" });
+        if(!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+        return await r.text();
+      }catch(directErr){
+        // Fallback to AllOrigins
+        const proxyUrl = CORS_RAW(directUrl);
+        const r2 = await fetch(proxyUrl, { cache:"no-store" });
+        if(!r2.ok) throw new Error(`Direct failed (${directErr.message}); Proxy HTTP ${r2.status} ${r2.statusText}`);
+        return await r2.text();
+      }
+    }
 
-      // Uses TradingView Symbol Overview Compare configuration
-      // scaleMode: "Percentage" = normalized comparison; dateRanges includes only 12m|1D and hideDateRanges locks it.
-      s.innerHTML = JSON.stringify({
-        symbols: [
-          ["S&P 500", "SP:SPX|1D"]
-        ],
-        chartOnly: true,
-        width: "100%",
-        height: "100%",
-        locale: "en",
-        colorTheme: "light",
-        autosize: true,
-        showVolume: false,
-        showMA: false,
-        hideDateRanges: true,
-        hideMarketStatus: true,
-        hideSymbolLogo: true,
-        scalePosition: "right",
-        scaleMode: "Percentage",
-        fontFamily: "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
-        fontSize: "10",
-        noTimeScale: false,
-        valuesTracking: "1",
-        changeMode: "price-only",
-        chartType: "line",
-        lineWidth: 2,
-        compareSymbol: {
-          symbol: "DJ:DJI"
-        },
-        dateRanges: ["12m|1D"],
-        bottomColor: "rgba(255, 255, 255, 0)",
-        dateFormat: "MMM dd, yyyy",
-        timeHoursFormat: "12-hours"
-      });
+    async function fetchStooqDaily(symbol){
+      // Stooq daily CSV
+      const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
+      const csv = await fetchTextWithFallback(url);
 
-      host.appendChild(s);
+      const lines = csv.trim().split("\n");
+      if(lines.length < 3) throw new Error(`Stooq returned too little data for ${symbol}`);
+      const headers = lines[0].split(",");
+      const dateIdx = headers.indexOf("Date");
+      const closeIdx = headers.indexOf("Close");
+      if(dateIdx === -1 || closeIdx === -1) throw new Error(`Unexpected CSV format for ${symbol}`);
+
+      const pts = [];
+      for(let i=1;i<lines.length;i++){
+        const cols = lines[i].split(",");
+        const d = cols[dateIdx];
+        const c = cols[closeIdx];
+        if(!d || !c) continue;
+        const close = Number(c);
+        if(!Number.isFinite(close)) continue;
+        pts.push({ x: new Date(d).getTime(), y: close });
+      }
+      pts.sort((a,b)=>a.x-b.x);
+      if(pts.length < 30) throw new Error(`Not enough parsed points for ${symbol} (${pts.length})`);
+      return pts;
+    }
+
+    function rollingOneYear(points){
+      const now = Date.now();
+      const oneYearAgo = now - 365*24*60*60*1000;
+      return points.filter(p => p.x >= oneYearAgo && p.x <= now);
+    }
+
+    function normalizeTo100(points){
+      if(!points.length) return points;
+      const base = points[0].y;
+      return points.map(p => ({ x: p.x, y: (p.y / base) * 100 }));
+    }
+
+    async function renderMarketsChart(){
       const badge = document.getElementById("mkUpdated");
-      if (badge) badge.textContent = "Live";
+      try{
+        if (badge) badge.textContent = "Updating…";
+        showMkError("");
+
+        // Stooq symbols:
+        // ^SPX = S&P 500 index, ^DJI = Dow Jones Industrial Average
+        const [spxRaw, djiRaw] = await Promise.all([
+          fetchStooqDaily("^spx"),
+          fetchStooqDaily("^dji"),
+        ]);
+
+        const spx = normalizeTo100(rollingOneYear(spxRaw));
+        const dji = normalizeTo100(rollingOneYear(djiRaw));
+
+        const canvas = document.getElementById("mkChart");
+        if(!canvas) return;
+
+        if(mkChart) mkChart.destroy();
+
+        mkChart = new Chart(canvas, {
+          type: "line",
+          data: {
+            datasets: [
+              { label: "S&P 500 (norm.)", data: spx, parsing:false, pointRadius:0, borderWidth:2, tension:0.25 },
+              { label: "Dow Jones (norm.)", data: dji, parsing:false, pointRadius:0, borderWidth:2, tension:0.25 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: true } },
+            scales: {
+              x: {
+                type: "time",
+                time: { unit: "month" },
+                ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkip: true }
+              },
+              y: {
+                ticks: { display: false },
+                grid: { drawBorder: false }
+              }
+            }
+          }
+        });
+
+        if (badge) badge.textContent = `Updated ${fmtTime(new Date())}`;
+      }catch(e){
+        console.error("Markets chart error:", e);
+        if (badge) badge.textContent = "Markets unavailable";
+        showMkError(
+          `Markets load failed.\n\n` +
+          `Error: ${e?.message || e}\n\n` +
+          `Try opening these URLs in the same browser:\n` +
+          `1) https://stooq.com/q/d/l/?s=%5Espx&i=d\n` +
+          `2) https://stooq.com/q/d/l/?s=%5Edji&i=d\n\n` +
+          `If those open but the chart still fails, the issue is likely browser CORS blocking.`
+        );
+      }
     }
 
     // -------------------------
     // Boot
     // -------------------------
     (async function init(){
-      addTradingViewTicker();
-      addTradingViewCompareChart();
+      // If your network 403s s3.tradingview.com, this ticker will also fail.
+      // If so, just comment out the next line.
+      try { addTradingViewTicker(); } catch(e) {}
 
       try{ await loadWeather(); }catch(e){
         document.getElementById('wxText').textContent = "Weather unavailable";
       }
       try{ await loadNews(); }catch(e){}
 
+      renderMarketsChart().catch(()=>{});
+
       setInterval(()=>loadWeather().catch(()=>{}), 5*60*1000);
       setInterval(()=>loadNews().catch(()=>{}), 10*60*1000);
-
-      // Re-initialize TV widgets occasionally (helps kiosk setups)
-      setInterval(()=>addTradingViewTicker(), 30*60*1000);
-      setInterval(()=>addTradingViewCompareChart(), 60*60*1000);
+      setInterval(()=>renderMarketsChart().catch(()=>{}), 60*60*1000);
     })();
   </script>
 </body>
