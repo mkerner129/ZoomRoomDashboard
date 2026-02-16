@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Halifax Weather Channel Board</title>
+  <title>TV Weather Board</title>
   <style>
     :root{
       --bgTop:#061a3a;
@@ -187,64 +187,206 @@
     .h-temp{font-size:18px;font-weight:1000;font-variant-numeric: tabular-nums;color:#fff;}
     .h-mini{margin-top:4px;font-size:11px;color:var(--muted);font-weight:900;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+    /* ======= PRECIP PANEL ======= */
     .precip{
       border-radius:22px;border:1px solid rgba(255,255,255,.16);
       background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.05));
       box-shadow: var(--shadow2);
-      padding:14px;display:flex;flex-direction:column;gap:10px;overflow:hidden;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:hidden;
     }
-    .p-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
-    .p-head h2{margin:0;font-size:14px;font-weight:950;letter-spacing:.8px;text-transform:uppercase;color:#fff;}
+    .p-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .p-head h2{
+      margin:0;
+      font-size:14px;
+      font-weight:950;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      color:#fff;
+    }
 
-    /* TV grid */
-.bars{
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  align-items: end;
-  gap: 8px;
+    /* Scale + chart wrapper */
+    .precip-chart{
+      display:grid;
+      grid-template-columns: 64px 1fr;
+      gap:12px;
+      align-items:stretch;
+    }
 
-  height: 140px;
-  padding: 10px 10px 6px;
-  border-radius: 16px;
+    .precip-scale{
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      color:var(--muted);
+      font-size:10px;
+      font-weight:950;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+      padding:8px 0 10px;
+      position:relative;
+    }
+    .precip-scale::after{
+      content:"";
+      position:absolute;
+      right:6px;
+      top:6px;
+      bottom:8px;
+      width:1px;
+      background: rgba(255,255,255,.12);
+    }
 
-  background:
-    linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
-    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
-}
+    /* Bars area: 12 equal columns */
+    .bars-wrap{
+      position:relative;
+    }
 
-.bar{
-  width: 100%;              /* Fill grid column */
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.14);
-  box-shadow: 0 10px 18px rgba(0,0,0,.22);
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12));
-}
+    .bars{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      align-items:end;
+      gap:8px;
+      height:140px;
+      padding:10px 10px 6px;
+      border-radius:16px;
+      background:
+        linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
+      overflow:hidden;
+      position:relative;
+    }
+
+    /* "Now" marker line */
+    .now-line{
+      position:absolute;
+      top:10px;           /* match bars padding top */
+      bottom:6px;         /* match bars padding bottom */
+      left: calc(10px + (100% - 20px) / 12 * 0.5); /* approx center of first column */
+      width:2px;
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 0 18px rgba(255,255,255,.35);
+      border-radius: 2px;
+      pointer-events:none;
+      opacity:.85;
+      z-index:5;
+    }
+    .now-line::after{
+      content:"NOW";
+      position:absolute;
+      top:-18px;
+      left:-16px;
+      font-size:10px;
+      font-weight:1000;
+      letter-spacing:.6px;
+      color:#ffffff;
+      opacity:.95;
+      text-shadow: 0 8px 18px rgba(0,0,0,.45);
+    }
+
+    /* Blue gradient bars */
+    .bar{
+      width:100%;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 10px 18px rgba(0,0,0,.22);
+      position:relative;
+      overflow:hidden;
+
+      /* darker on top, lighter at bottom */
+      background: linear-gradient(
+        to top,
+        rgba(185,232,255,.85) 0%,
+        rgba(90,188,255,.95) 45%,
+        rgba(18,106,255,1) 100%
+      );
+      transform: translateZ(0);
+    }
+
+    /* Shimmer animation (rainfall sheen) */
+    .bar::before{
+      content:"";
+      position:absolute;
+      inset:-40% -60%;
+      background: linear-gradient(120deg,
+        transparent 35%,
+        rgba(255,255,255,.20) 45%,
+        transparent 55%);
+      transform: rotate(8deg);
+      animation: shimmer 2.4s linear infinite;
+      opacity:.55;
+      mix-blend-mode: screen;
+      pointer-events:none;
+    }
+    @keyframes shimmer{
+      0%{transform: translateX(-30%) rotate(8deg)}
+      100%{transform: translateX(30%) rotate(8deg)}
+    }
+
+    /* Gloss highlight */
     .bar::after{
-      content:"";position:absolute;inset:0;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%);
-      opacity:.9;
+      content:"";
+      position:absolute;
+      inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.22), transparent 55%);
+      opacity:.85;
+      pointer-events:none;
     }
 
-.bar-labels{
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 8px;
+    /* Numeric overlay inside bar */
+    .bar-value{
+      position:absolute;
+      left:0; right:0;
+      top:6px;
+      text-align:center;
+      font-size:10px;
+      font-weight:1000;
+      letter-spacing:.4px;
+      color:#ffffff;
+      text-shadow: 0 8px 18px rgba(0,0,0,.55);
+      opacity:.95;
+      pointer-events:none;
+    }
 
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 950;
-  letter-spacing: .6px;
-  text-transform: uppercase;
-}
+    /* Glow effect for heavier (based on class) */
+    .bar.heavy{
+      box-shadow:
+        0 10px 18px rgba(0,0,0,.22),
+        0 0 22px rgba(90,188,255,.55),
+        0 0 44px rgba(18,106,255,.35);
+      border-color: rgba(255,255,255,.22);
+    }
+    .bar.moderate{
+      box-shadow:
+        0 10px 18px rgba(0,0,0,.22),
+        0 0 16px rgba(90,188,255,.35);
+      border-color: rgba(255,255,255,.18);
+    }
 
-.bar-labels span{
-  text-align: center;
-}
+    /* Labels: 12 equal columns under bars */
+    .bar-labels{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:8px;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:10px;
+      font-weight:950;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .bar-labels span{
+      text-align:center;
+      min-height: 12px;
+    }
 
-
+    /* ======= RIGHT PANEL ======= */
     .right{height:100%;display:grid;grid-template-rows:1fr auto;gap:16px;min-height:0;}
     .forecast{padding:18px;min-height:0;display:flex;flex-direction:column;gap:12px;}
     .f-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
@@ -298,7 +440,7 @@
       <div>
         <div class="title">Weather Center</div>
         <div class="subtitle">
-          <span>Halifax, Nova Scotia</span>
+          <span id="placeLabel">Anaheim, California</span>
           <span class="pill" id="wxUpdated">Updating…</span>
           <span class="pill">Next update: 5 min</span>
         </div>
@@ -353,8 +495,19 @@
             —
           </div>
 
-          <div class="bars" id="bars"></div>
-          <div class="bar-labels" id="barLabels"></div>
+          <div class="precip-chart">
+            <div class="precip-scale">
+              <div>HEAVY</div>
+              <div>MODERATE</div>
+              <div>LIGHT</div>
+            </div>
+
+            <div class="bars-wrap">
+              <div class="now-line" id="nowLine"></div>
+              <div class="bars" id="bars"></div>
+              <div class="bar-labels" id="barLabels"></div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -395,7 +548,8 @@
   </footer>
 
   <script>
-    const HALIFAX = { lat: 33.8366, lon: -117.9143, tz: "America/Los_Angeles" };
+    // Location: Anaheim, CA
+    const HALIFAX = { lat: 33.8366, lon: -117.9143, tz: "America/Los_Angeles", label: "Anaheim, California" };
 
     function tickClock(){
       const d = new Date();
@@ -510,6 +664,8 @@
     }
 
     function findStartIndex(times){
+      // data timestamps are in local time for the requested timezone, like "2026-02-16T09:00"
+      // choose first hour >= local current hour
       const now = new Date();
       const nowKey = now.toISOString().slice(0,10) + "T" + String(now.getHours()).padStart(2,"0");
       let start = 0;
@@ -517,6 +673,14 @@
         if(times[i].slice(0,13) >= nowKey){ start=i; break; }
       }
       return start;
+    }
+
+    function setNowLineToFirstBar(){
+      // keep it as "NOW = first column" (current-ish hour)
+      // If you want "NOW" to move within the 12 columns, we can do that too.
+      // For now this matches the start index logic.
+      const line = document.getElementById("nowLine");
+      line.style.left = `calc(10px + (100% - 20px) / 12 * 0.5)`;
     }
 
     function renderHourly(data){
@@ -553,7 +717,7 @@
         hourlyEl.appendChild(item);
       }
 
-      // Precipitation panel bars
+      // Precipitation panel (force POP when available)
       const bars=document.getElementById("bars");
       const labels=document.getElementById("barLabels");
       const banner=document.getElementById("precipBanner");
@@ -562,7 +726,6 @@
       bars.innerHTML="";
       labels.innerHTML="";
 
-      // ✅ CHANGE 2: Force chart to use POP when available, else fall back to mm
       let series = null;
       let isProb = false;
 
@@ -581,64 +744,74 @@
 
       if(!series){
         banner.textContent = "PRECIP DATA NOT AVAILABLE";
-        // baseline bars for layout
         for(let k=0;k<12;k++){
           const b=document.createElement("div");
           b.className="bar";
-          b.style.height="36px";
-          b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+          b.style.height="34px";
+          b.innerHTML = `<div class="bar-value">--</div>`;
           bars.appendChild(b);
 
           const lab=document.createElement("span");
-          lab.textContent = (k % 2 === 0) ? "--" : "";
+          lab.textContent = "--";
           labels.appendChild(lab);
         }
+        setNowLineToFirstBar();
         return;
       }
 
+      // Extract 12 values
       const slice = [];
       for (let i=start; i<Math.min(start+12, times.length); i++) slice.push(Number(series[i] ?? 0));
+      while (slice.length < 12) slice.push(0);
+
       const max = Math.max(...slice, 0);
 
-      // ✅ CHANGE 2 (continued): Banner logic that matches POP vs mm
       banner.textContent = isProb
         ? (max < 5 ? "LOW CHANCE OF PRECIP (NEXT 12H)" : `MAX POP ${Math.round(max)}% (NEXT 12H)`)
         : (max < 0.1 ? "NO PRECIP EXPECTED (NEXT 12H)" : `MAX ${max.toFixed(1)} MM (NEXT 12H)`);
 
-      // Scaling: keep visible on dry days
+      // scaling: keep visual even when low
       const scaleMax = isProb ? Math.max(20, max) : (max < 0.1 ? 1.0 : max);
 
-      for(let i=start;i<Math.min(start+12,times.length);i++){
-        const val = Number(series[i] ?? 0);
+      for(let k=0;k<12;k++){
+        const val = Number(slice[k] ?? 0);
 
-        // baseline height so bars aren't dots/circles
+        // baseline height so it never looks dead; fill to 140px max (bars container)
         const h = Math.max(34, Math.round((val/scaleMax)*120));
 
         const b=document.createElement("div");
         b.className="bar";
         b.style.height=`${Math.min(140,h)}px`;
 
+        // add glow tiers based on intensity (still all-blue)
         if(isProb){
-          if(val >= 60) b.style.background="linear-gradient(180deg, rgba(255,176,32,.98), rgba(55,162,255,.18))";
-          else if(val >= 30) b.style.background="linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
-          else if(val >= 10) b.style.background="linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12))";
-          else b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+          if(val >= 60) b.classList.add("heavy");
+          else if(val >= 30) b.classList.add("moderate");
         } else {
-          if(val >= 3) b.style.background="linear-gradient(180deg, rgba(255,176,32,.98), rgba(55,162,255,.18))";
-          else if(val >= 1) b.style.background="linear-gradient(180deg, rgba(55,162,255,.98), rgba(55,162,255,.18))";
-          else if(val >= 0.2) b.style.background="linear-gradient(180deg, rgba(121,199,255,.88), rgba(55,162,255,.12))";
-          else b.style.background="linear-gradient(180deg, rgba(255,255,255,.16), rgba(55,162,255,.06))";
+          if(val >= 3) b.classList.add("heavy");
+          else if(val >= 1) b.classList.add("moderate");
         }
+
+        // value overlay
+        const txt = isProb ? `${Math.round(val)}%` : `${val.toFixed(1)}`;
+        b.innerHTML = `<div class="bar-value">${txt}</div>`;
 
         bars.appendChild(b);
 
-        // labels: show hour only, every other hour to prevent overlap
-        const t = new Date(times[i]);
-        const hh = String(t.getHours()).padStart(2,"0");
+        // label below: hour only; show every other to reduce clutter
+        const i = start + k;
         const lab=document.createElement("span");
-        lab.textContent = ((i-start) % 2 === 0) ? hh : "";
+        if(i < times.length){
+          const t = new Date(times[i]);
+          const hh = String(t.getHours()).padStart(2,"0");
+          lab.textContent = (k % 2 === 0) ? hh : "";
+        } else {
+          lab.textContent = (k % 2 === 0) ? "--" : "";
+        }
         labels.appendChild(lab);
       }
+
+      setNowLineToFirstBar();
     }
 
     function renderForecast(data){
@@ -671,9 +844,9 @@
     }
 
     async function loadWeather(){
-      const {lat,lon,tz}=HALIFAX;
+      const {lat,lon,tz,label}=HALIFAX;
+      document.getElementById("placeLabel").textContent = label;
 
-      // ✅ CHANGE 1: ensure precipitation_probability is requested
       const url=
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
         `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,cloud_cover,uv_index,pressure_msl`+
