@@ -330,13 +330,19 @@
       text-transform:uppercase;
       color:#fff;
     }
-    .bars{
-      display:flex;
-      align-items:flex-end;
-      gap:8px;
-      height:140px;
-      padding-top:6px;
-    }
+.bars{
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+  height:140px;
+  padding:10px 10px 6px;
+  border-radius:16px;
+
+  /* TV-style grid */
+  background:
+    linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
+}
     .bar{
       width:18px;
       border-radius: 10px;
