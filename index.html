@@ -95,7 +95,7 @@
       background:#fff;
       white-space:pre-wrap;
       word-break:break-word;
-      display:block; /* always present; we’ll fill it when errors happen */
+      display:block;
       min-height: 0;
     }
 
@@ -163,7 +163,7 @@
       </div>
 
       <div class="foot">
-        If this shows an error, it’s the exact reason the chart didn’t load (CORS, blocked domain, CDN blocked, etc.).
+        Data source: Stooq daily close via CORS proxy fallback chain. If it fails, the exact error shows above.
       </div>
     </section>
 
@@ -197,7 +197,7 @@
 
   <script>
     // -------------------------
-    // Helpers: always show JS errors in the mkError box
+    // Error plumbing: always show JS errors in mkError
     // -------------------------
     function setMkError(msg){
       const el = document.getElementById("mkError");
@@ -227,7 +227,18 @@
     const HALIFAX = { lat: 44.6488, lon: -63.5752, tz: "America/Halifax" };
     const LOCAL_RSS = "https://novascotia.ca/news/rss/";
     const WORLD_RSS = "https://feeds.bbci.co.uk/news/rss.xml?edition=int";
-    const CORS_RAW = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+
+    // Multiple proxy options (tries each until one works)
+    const CORS_PROXIES = [
+      // Jina AI renderer (often very reliable for raw text)
+      (url) => `https://r.jina.ai/http://${url.replace(/^https?:\/\//,'')}`,
+      (url) => `https://r.jina.ai/https://${url.replace(/^https?:\/\//,'')}`,
+
+      // Other public CORS proxies (availability varies by network)
+      (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      (url) => `https://cors.isomorphic-git.org/${url}`,
+    ];
 
     // Clock
     function tickClock(){
@@ -238,9 +249,7 @@
     }
     tickClock(); setInterval(tickClock, 1000);
 
-    // -------------------------
-    // Weather icons (same as your original)
-    // -------------------------
+    // Inline SVG icons generator (lightweight)
     function svgFor(code, size=84){
       const cloudy = [2,3];
       const fog = [45,48];
@@ -314,6 +323,7 @@
       return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="64" height="64" rx="10" fill="#E6EEF8"/></svg>`;
     }
 
+    // Weather mapping & UI update (Open-Meteo)
     function weatherCodeToText(code){
       const map = {
         0:"Clear", 1:"Mainly clear", 2:"Partly cloudy", 3:"Overcast",
@@ -355,8 +365,11 @@
 
       document.getElementById('wxText').textContent = weatherCodeToText(c.weather_code);
       document.getElementById('wxUpdated').textContent = `Updated ${new Date(c.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+
+      // icon
       document.getElementById('wxIcon').innerHTML = svgFor(c.weather_code, 84);
 
+      // forecast
       const f = document.getElementById('forecast');
       f.innerHTML = "";
       const times = data.daily.time;
@@ -383,15 +396,35 @@
     }
 
     // -------------------------
-    // News
+    // News (via CORS proxy chain too)
     // -------------------------
     function stripHtml(s){ return (s ?? "").replace(/<[^>]*>/g,"").trim(); }
     function fmtTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 
+    async function fetchTextWithProxyChain(url){
+      // Try direct first (some sources allow CORS)
+      try{
+        const r = await fetch(url, { cache:"no-store" });
+        if(r.ok) return await r.text();
+        throw new Error(`Direct HTTP ${r.status} ${r.statusText}`);
+      }catch(directErr){
+        const errors = [`Direct failed: ${directErr?.message || directErr}`];
+        for(const makeProxyUrl of CORS_PROXIES){
+          const purl = makeProxyUrl(url);
+          try{
+            const r2 = await fetch(purl, { cache:"no-store" });
+            if(!r2.ok) throw new Error(`HTTP ${r2.status} ${r2.statusText}`);
+            return await r2.text();
+          }catch(e){
+            errors.push(`Proxy failed (${purl}): ${e?.message || e}`);
+          }
+        }
+        throw new Error(errors.join("\n"));
+      }
+    }
+
     async function fetchRssItems(rssUrl, maxItems=6){
-      const res = await fetch(CORS_RAW(rssUrl), {cache:"no-store"});
-      if(!res.ok) throw new Error("RSS fetch failed");
-      const text = await res.text();
+      const text = await fetchTextWithProxyChain(rssUrl);
       const xml = new DOMParser().parseFromString(text, "text/xml");
       const items = Array.from(xml.querySelectorAll("item")).slice(0,maxItems);
       if(items.length) return items.map(item=>({
@@ -433,33 +466,19 @@
         renderNews("newsWorld", world);
         document.getElementById('newsUpdated').textContent = `Updated ${fmtTime(new Date())}`;
       }catch(e){
+        console.error(e);
         document.getElementById('newsUpdated').textContent = "News unavailable";
       }
     }
 
     // -------------------------
-    // Markets chart: robust fetch + normalize + line
+    // Markets chart: Stooq via proxy chain + normalize + line
     // -------------------------
     let mkChart;
 
-    async function fetchTextWithFallback(directUrl){
-      // Try direct first
-      try{
-        const r = await fetch(directUrl, { cache:"no-store" });
-        if(!r.ok) throw new Error(`Direct HTTP ${r.status} ${r.statusText}`);
-        return await r.text();
-      }catch(directErr){
-        // Fallback to AllOrigins
-        const proxyUrl = CORS_RAW(directUrl);
-        const r2 = await fetch(proxyUrl, { cache:"no-store" });
-        if(!r2.ok) throw new Error(`Direct failed (${directErr.message}); Proxy HTTP ${r2.status} ${r2.statusText}`);
-        return await r2.text();
-      }
-    }
-
     async function fetchStooqDaily(symbol){
       const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
-      const csv = await fetchTextWithFallback(url);
+      const csv = await fetchTextWithProxyChain(url);
 
       const lines = csv.trim().split("\n");
       if(lines.length < 3) throw new Error(`Stooq returned too little data for ${symbol}`);
@@ -499,7 +518,7 @@
       const badge = document.getElementById("mkUpdated");
       try{
         if (badge) badge.textContent = "Updating…";
-        setMkError("");
+        setMkError("Loading markets…");
 
         const [spxRaw, djiRaw] = await Promise.all([
           fetchStooqDaily("^spx"),
@@ -542,14 +561,16 @@
         });
 
         if (badge) badge.textContent = `Updated ${fmtTime(new Date())}`;
+        setMkError("");
       }catch(e){
         console.error("Markets chart error:", e);
         if (badge) badge.textContent = "Markets unavailable";
         setMkError(
-          `Markets load failed:\n${e?.message || e}\n\n` +
-          `Try these in the SAME browser:\n` +
-          `- https://stooq.com/q/d/l/?s=%5Espx&i=d\n` +
-          `- https://stooq.com/q/d/l/?s=%5Edji&i=d\n`
+          `Markets load failed.\n\n` +
+          `Error: ${e?.message || e}\n\n` +
+          `Direct links (should download):\n` +
+          `1) https://stooq.com/q/d/l/?s=%5Espx&i=d\n` +
+          `2) https://stooq.com/q/d/l/?s=%5Edji&i=d\n`
         );
       }
     }
@@ -558,8 +579,7 @@
     // Boot
     // -------------------------
     (async function init(){
-      // If you see errors here, it means CDN scripts or parsing are blocked.
-      setMkError("Loading markets… (if this never changes, a script/CDN may be blocked)");
+      setMkError("Loading markets…");
 
       try{ await loadWeather(); }catch(e){
         document.getElementById('wxText').textContent = "Weather unavailable";
