@@ -79,7 +79,7 @@
     /* Ticker */
     #tv-ticker{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
 
-    /* Markets chart */
+    /* Markets compare chart (TradingView) */
     .markets-chart{
       border:1px solid var(--border);
       border-radius:14px;
@@ -87,9 +87,12 @@
       padding:12px;
       height:220px;
     }
+    .markets-chart .tradingview-widget-container,
+    .markets-chart .tradingview-widget-container__widget{
+      height: 170px; /* leaves room for header row */
+    }
 
     .foot{margin-top:10px;font-size:12px;color:var(--muted)}
-
     @media (max-width:1100px){main{grid-template-columns:1fr}.forecast{grid-template-columns:repeat(3,1fr)}}
   </style>
 </head>
@@ -121,9 +124,7 @@
           </div>
 
           <div style="height:12px"></div>
-
           <div class="forecast" id="forecast"></div>
-
           <div class="foot">Weather data: Open-Meteo (no API key).</div>
         </div>
 
@@ -151,13 +152,17 @@
 
       <div class="markets-chart">
         <div class="row" style="justify-content:space-between;margin-bottom:8px;align-items:center">
-          <div style="font-weight:900">S&P 500 vs Dow (1Y)</div>
-          <div class="badge" id="mkUpdated">Updating…</div>
+          <div style="font-weight:900">S&P 500 vs Dow (1Y, normalized)</div>
+          <div class="badge" id="mkUpdated">Live</div>
         </div>
-        <canvas id="mkChart"></canvas>
+
+        <!-- TradingView compare chart container -->
+        <div class="tradingview-widget-container" id="tv-compare">
+          <div class="tradingview-widget-container__widget"></div>
+        </div>
       </div>
 
-      <div class="foot">Tip: edit the ticker symbols in the script if you want different instruments.</div>
+      <div class="foot">This chart uses TradingView’s built-in comparison (percentage scale) locked to 12 months.</div>
     </section>
 
     <!-- NEWS -->
@@ -182,11 +187,6 @@
       <div class="foot">If headlines don't load, your network may block cross-origin requests — see IT.</div>
     </section>
   </main>
-
-  <!-- Chart.js for Markets chart (Option A: include date-fns BEFORE adapter) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 
   <script>
     // -------------------------
@@ -286,7 +286,6 @@
       return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="64" height="64" rx="10" fill="#E6EEF8"/></svg>`;
     }
 
-    // Weather mapping & UI update (Open-Meteo)
     function weatherCodeToText(code){
       const map = {
         0:"Clear", 1:"Mainly clear", 2:"Partly cloudy", 3:"Overcast",
@@ -328,7 +327,6 @@
 
       document.getElementById('wxText').textContent = weatherCodeToText(c.weather_code);
       document.getElementById('wxUpdated').textContent = `Updated ${new Date(c.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-
       document.getElementById('wxIcon').innerHTML = svgFor(c.weather_code, 84);
 
       const f = document.getElementById('forecast');
@@ -412,7 +410,7 @@
     }
 
     // -------------------------
-    // TradingView ticker
+    // TradingView widgets
     // -------------------------
     function addTradingViewTicker(){
       const container = document.getElementById("tv-ticker"); container.innerHTML="";
@@ -430,117 +428,56 @@
       container.appendChild(s);
     }
 
-    // -------------------------
-    // Markets chart: S&P 500 vs Dow (rolling 1Y, normalized, line)
-    // Uses Stooq daily CSV via AllOrigins to avoid CORS issues.
-    // Normalizes both series to 100 at the start of the 1-year window.
-    // -------------------------
-    let mkChart;
+    // Comparison chart: normalized (% scale) and locked to 12 months (rolling 1Y).
+    function addTradingViewCompareChart(){
+      const host = document.getElementById("tv-compare");
+      if(!host) return;
 
-    async function fetchStooqDaily(symbol){
-      const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
-      const res = await fetch(CORS_RAW(url), { cache: "no-store" });
-      if(!res.ok) throw new Error(`Stooq fetch failed for ${symbol}`);
-      const csv = await res.text();
+      // clear any previous widget
+      host.innerHTML = `<div class="tradingview-widget-container__widget"></div>`;
 
-      const lines = csv.trim().split("\n");
-      const headers = lines[0].split(",");
-      const dateIdx = headers.indexOf("Date");
-      const closeIdx = headers.indexOf("Close");
-      if(dateIdx === -1 || closeIdx === -1) throw new Error(`Unexpected CSV format for ${symbol}`);
+      const s = document.createElement("script");
+      s.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
+      s.async = true;
 
-      const pts = [];
-      for(let i=1;i<lines.length;i++){
-        const cols = lines[i].split(",");
-        const d = cols[dateIdx];
-        const c = cols[closeIdx];
-        if(!d || !c) continue;
-        const close = Number(c);
-        if(!Number.isFinite(close)) continue;
-        pts.push({ x: new Date(d).getTime(), y: close });
-      }
-      pts.sort((a,b)=>a.x-b.x);
-      return pts;
-    }
+      // Uses TradingView Symbol Overview Compare configuration
+      // scaleMode: "Percentage" = normalized comparison; dateRanges includes only 12m|1D and hideDateRanges locks it.
+      s.innerHTML = JSON.stringify({
+        symbols: [
+          ["S&P 500", "SP:SPX|1D"]
+        ],
+        chartOnly: true,
+        width: "100%",
+        height: "100%",
+        locale: "en",
+        colorTheme: "light",
+        autosize: true,
+        showVolume: false,
+        showMA: false,
+        hideDateRanges: true,
+        hideMarketStatus: true,
+        hideSymbolLogo: true,
+        scalePosition: "right",
+        scaleMode: "Percentage",
+        fontFamily: "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+        fontSize: "10",
+        noTimeScale: false,
+        valuesTracking: "1",
+        changeMode: "price-only",
+        chartType: "line",
+        lineWidth: 2,
+        compareSymbol: {
+          symbol: "DJ:DJI"
+        },
+        dateRanges: ["12m|1D"],
+        bottomColor: "rgba(255, 255, 255, 0)",
+        dateFormat: "MMM dd, yyyy",
+        timeHoursFormat: "12-hours"
+      });
 
-    function rollingOneYear(points){
-      const now = Date.now();
-      const oneYearAgo = now - 365*24*60*60*1000;
-      return points.filter(p => p.x >= oneYearAgo && p.x <= now);
-    }
-
-    function normalizeTo100(points){
-      if(!points.length) return points;
-      const base = points[0].y;
-      return points.map(p => ({ x: p.x, y: (p.y / base) * 100 }));
-    }
-
-    async function renderMarketsChart(){
+      host.appendChild(s);
       const badge = document.getElementById("mkUpdated");
-      try{
-        if (badge) badge.textContent = "Updating…";
-
-        const [spxRaw, djiRaw] = await Promise.all([
-          fetchStooqDaily("^spx"),
-          fetchStooqDaily("^dji"),
-        ]);
-
-        const spx = normalizeTo100(rollingOneYear(spxRaw));
-        const dji = normalizeTo100(rollingOneYear(djiRaw));
-
-        const canvas = document.getElementById("mkChart");
-        if(!canvas) return;
-
-        if(mkChart) mkChart.destroy();
-
-        mkChart = new Chart(canvas, {
-          type: "line",
-          data: {
-            datasets: [
-              {
-                label: "S&P 500 (norm.)",
-                data: spx,
-                parsing: false,
-                pointRadius: 0,
-                borderWidth: 2,
-                tension: 0.25
-              },
-              {
-                label: "Dow Jones (norm.)",
-                data: dji,
-                parsing: false,
-                pointRadius: 0,
-                borderWidth: 2,
-                tension: 0.25
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            plugins: {
-              legend: { display: true }
-            },
-            scales: {
-              x: {
-                type: "time",
-                time: { unit: "month" },
-                ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkip: true }
-              },
-              y: {
-                ticks: { display: false },
-                grid: { drawBorder: false }
-              }
-            }
-          }
-        });
-
-        if (badge) badge.textContent = `Updated ${fmtTime(new Date())}`;
-      }catch(e){
-        console.error("Markets chart error:", e);
-        if (badge) badge.textContent = "Markets unavailable";
-      }
+      if (badge) badge.textContent = "Live";
     }
 
     // -------------------------
@@ -548,18 +485,19 @@
     // -------------------------
     (async function init(){
       addTradingViewTicker();
+      addTradingViewCompareChart();
 
       try{ await loadWeather(); }catch(e){
         document.getElementById('wxText').textContent = "Weather unavailable";
       }
-
       try{ await loadNews(); }catch(e){}
-
-      renderMarketsChart().catch(()=>{});
 
       setInterval(()=>loadWeather().catch(()=>{}), 5*60*1000);
       setInterval(()=>loadNews().catch(()=>{}), 10*60*1000);
-      setInterval(()=>renderMarketsChart().catch(()=>{}), 60*60*1000);
+
+      // Re-initialize TV widgets occasionally (helps kiosk setups)
+      setInterval(()=>addTradingViewTicker(), 30*60*1000);
+      setInterval(()=>addTradingViewCompareChart(), 60*60*1000);
     })();
   </script>
 </body>
