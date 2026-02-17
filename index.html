@@ -892,19 +892,24 @@
         return;
       }
 
-      // Slice next SLOTS hours
-      var slice = [];
-      for(var j=start; j<Math.min(start + SLOTS, times.length); j++){
-        slice.push(Number(series[j] || 0));
-      }
-      while(slice.length < SLOTS) slice.push(0);
+      // Slice next SLOTS hours (round to 1 decimal so "0.0" truly behaves like zero)
+var slice = [];
+for(var j=start; j<Math.min(start + SLOTS, times.length); j++){
+  var raw = Number(series[j] || 0);
+  var rounded = Math.round(raw * 10) / 10;   // 1 decimal to match display
+  slice.push(rounded);
+}
+while(slice.length < SLOTS) slice.push(0);
 
-      var max = 0;
-      for(var m=0; m<slice.length; m++){
-        if(slice[m] > max) max = slice[m];
-      }
+// Compute max on the rounded values
+var max = 0;
+for(var m=0; m<slice.length; m++){
+  if(slice[m] > max) max = slice[m];
+}
 
-      var isDryWindow = max <= 0; // ✅ your rule: no bars at all if mm=0 everywhere
+// Dry window if EVERYTHING rounds to 0.0
+var isDryWindow = (max === 0);
+
 
       if(isDryWindow){
         banner.textContent = "NO PRECIP EXPECTED (NEXT " + SLOTS + "H)";
