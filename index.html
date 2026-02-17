@@ -561,129 +561,171 @@
     }
 
     function svgFor(code, size=110){
-      __svgId += 1;
-      const uid = __svgId;
+  __svgId += 1;
+  const uid = __svgId;
 
-      const fog=[45,48], drizzle=[51,53,55,56,57], rain=[61,63,65,66,67,80,81,82],
-            snow=[71,73,75,77,85,86], thunder=[95,96,99];
+  // ✅ normalize: Open-Meteo usually sends numbers, but some environments stringify them
+  const wc = Number(code);
 
-      let kind="clear";
-      if(fog.includes(code)) kind="fog";
-      else if(drizzle.includes(code)) kind="drizzle";
-      else if(rain.includes(code)) kind="rain";
-      else if(snow.includes(code)) kind="snow";
-      else if(thunder.includes(code)) kind="thunder";
-      else if(code===2||code===3||code===1) kind="partly";
+  // If missing/bad, show a "partly" icon instead of the grey square
+  if (!Number.isFinite(wc)) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="sun2_${uid}" cx="35%" cy="35%" r="70%">
+          <stop offset="0" stop-color="#FFF1B0"/>
+          <stop offset="1" stop-color="#FFB020"/>
+        </radialGradient>
+        <linearGradient id="cloud_${uid}" x1="0" x2="1">
+          <stop offset="0" stop-color="#EAF2FF"/>
+          <stop offset="1" stop-color="#BFD8FF"/>
+        </linearGradient>
+      </defs>
+      <circle cx="22" cy="24" r="10" fill="url(#sun2_${uid})"/>
+      <g fill="url(#cloud_${uid})">
+        <ellipse cx="38" cy="34" rx="18" ry="10"/>
+        <ellipse cx="24" cy="38" rx="14" ry="8"/>
+      </g>
+    </svg>`;
+  }
 
-      const base = (inner) =>
-        `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  const fog=[45,48], drizzle=[51,53,55,56,57], rain=[61,63,65,66,67,80,81,82],
+        snow=[71,73,75,77,85,86], thunder=[95,96,99];
 
-      if(kind==="clear") return base(`
-        <defs>
-          <radialGradient id="sun_${uid}" cx="35%" cy="35%" r="70%">
-            <stop offset="0" stop-color="#FFF1B0"/>
-            <stop offset="1" stop-color="#FFB020"/>
-          </radialGradient>
-        </defs>
-        <circle cx="32" cy="32" r="14" fill="url(#sun_${uid})"/>
-        <g stroke="#FFCF5A" stroke-width="2" stroke-linecap="round" opacity=".95">
-          <path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>
-          <path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>
-        </g>
-      `);
+  let kind="clear";
+  if(fog.includes(wc)) kind="fog";
+  else if(drizzle.includes(wc)) kind="drizzle";
+  else if(rain.includes(wc)) kind="rain";
+  else if(snow.includes(wc)) kind="snow";
+  else if(thunder.includes(wc)) kind="thunder";
+  else if(wc===2||wc===3||wc===1) kind="partly";
 
-      if(kind==="partly") return base(`
-        <defs>
-          <radialGradient id="sun2_${uid}" cx="35%" cy="35%" r="70%">
-            <stop offset="0" stop-color="#FFF1B0"/>
-            <stop offset="1" stop-color="#FFB020"/>
-          </radialGradient>
-          <linearGradient id="cloud_${uid}" x1="0" x2="1">
-            <stop offset="0" stop-color="#EAF2FF"/>
-            <stop offset="1" stop-color="#BFD8FF"/>
-          </linearGradient>
-        </defs>
-        <circle cx="22" cy="24" r="10" fill="url(#sun2_${uid})"/>
-        <g fill="url(#cloud_${uid})">
-          <ellipse cx="38" cy="34" rx="18" ry="10"/>
-          <ellipse cx="24" cy="38" rx="14" ry="8"/>
-        </g>
-      `);
+  const base = (inner) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
-      if(kind==="fog") return base(`
-        <defs>
-          <linearGradient id="fg_${uid}" x1="0" x2="1">
-            <stop offset="0" stop-color="#EAF2FF"/>
-            <stop offset="1" stop-color="#BFD8FF"/>
-          </linearGradient>
-        </defs>
-        <rect x="10" y="14" width="44" height="36" rx="16" fill="url(#fg_${uid})" opacity=".95"/>
-        <g fill="#9FB6D8" opacity=".98">
-          <rect x="12" y="26" width="40" height="4" rx="2"/>
-          <rect x="10" y="34" width="44" height="4" rx="2"/>
-          <rect x="14" y="42" width="36" height="4" rx="2"/>
-        </g>
-      `);
+  if(kind==="clear") return base(`
+    <defs>
+      <radialGradient id="sun_${uid}" cx="35%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#FFF1B0"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </radialGradient>
+    </defs>
+    <circle cx="32" cy="32" r="14" fill="url(#sun_${uid})"/>
+    <g stroke="#FFCF5A" stroke-width="2" stroke-linecap="round" opacity=".95">
+      <path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>
+      <path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>
+    </g>
+  `);
 
-      if(kind==="rain") return base(`
-        <defs>
-          <linearGradient id="cloud3_${uid}" x1="0" x2="1">
-            <stop offset="0" stop-color="#EAF2FF"/>
-            <stop offset="1" stop-color="#BFD8FF"/>
-          </linearGradient>
-          <linearGradient id="drop_${uid}" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stop-color="#36C2FF"/>
-            <stop offset="1" stop-color="#2563EB"/>
-          </linearGradient>
-        </defs>
-        <g fill="url(#cloud3_${uid})">
-          <ellipse cx="36" cy="24" rx="18" ry="10"/>
-          <ellipse cx="22" cy="28" rx="14" ry="8"/>
-        </g>
-        <g fill="url(#drop_${uid})">
-          <path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
-          <path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
-          <path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
-        </g>
-      `);
+  if(kind==="partly") return base(`
+    <defs>
+      <radialGradient id="sun2_${uid}" cx="35%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#FFF1B0"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </radialGradient>
+      <linearGradient id="cloud_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <circle cx="22" cy="24" r="10" fill="url(#sun2_${uid})"/>
+    <g fill="url(#cloud_${uid})">
+      <ellipse cx="38" cy="34" rx="18" ry="10"/>
+      <ellipse cx="24" cy="38" rx="14" ry="8"/>
+    </g>
+  `);
 
-      if(kind==="snow") return base(`
-        <defs>
-          <linearGradient id="cloud4_${uid}" x1="0" x2="1">
-            <stop offset="0" stop-color="#EAF2FF"/>
-            <stop offset="1" stop-color="#BFD8FF"/>
-          </linearGradient>
-        </defs>
-        <g fill="url(#cloud4_${uid})">
-          <ellipse cx="36" cy="24" rx="18" ry="10"/>
-          <ellipse cx="22" cy="28" rx="14" ry="8"/>
-        </g>
-        <g fill="#D7F0FF">
-          <circle cx="22" cy="46" r="2.2"/><circle cx="32" cy="50" r="2.2"/>
-          <circle cx="42" cy="46" r="2.2"/><circle cx="50" cy="50" r="2.2"/>
-        </g>
-      `);
+  if(kind==="fog") return base(`
+    <defs>
+      <linearGradient id="fg_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <rect x="10" y="14" width="44" height="36" rx="16" fill="url(#fg_${uid})" opacity=".95"/>
+    <g fill="#9FB6D8" opacity=".98">
+      <rect x="12" y="26" width="40" height="4" rx="2"/>
+      <rect x="10" y="34" width="44" height="4" rx="2"/>
+      <rect x="14" y="42" width="36" height="4" rx="2"/>
+    </g>
+  `);
 
-      if(kind==="thunder") return base(`
-        <defs>
-          <linearGradient id="cloud5_${uid}" x1="0" x2="1">
-            <stop offset="0" stop-color="#EAF2FF"/>
-            <stop offset="1" stop-color="#BFD8FF"/>
-          </linearGradient>
-          <linearGradient id="bolt_${uid}" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stop-color="#FFE08A"/>
-            <stop offset="1" stop-color="#FFB020"/>
-          </linearGradient>
-        </defs>
-        <g fill="url(#cloud5_${uid})">
-          <ellipse cx="36" cy="24" rx="18" ry="10"/>
-          <ellipse cx="22" cy="28" rx="14" ry="8"/>
-        </g>
-        <polygon points="30,38 40,38 32,56 36,44 26,44" fill="url(#bolt_${uid})"/>
-      `);
+  if(kind==="rain") return base(`
+    <defs>
+      <linearGradient id="cloud3_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+      <linearGradient id="drop_${uid}" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#36C2FF"/>
+        <stop offset="1" stop-color="#2563EB"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cloud3_${uid})">
+      <ellipse cx="36" cy="24" rx="18" ry="10"/>
+      <ellipse cx="22" cy="28" rx="14" ry="8"/>
+    </g>
+    <g fill="url(#drop_${uid})">
+      <path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+      <path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+      <path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+    </g>
+  `);
 
-      return base(`<rect x="10" y="10" width="44" height="44" rx="16" fill="#BFD8FF"/>`);
-    }
+  if(kind==="snow") return base(`
+    <defs>
+      <linearGradient id="cloud4_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cloud4_${uid})">
+      <ellipse cx="36" cy="24" rx="18" ry="10"/>
+      <ellipse cx="22" cy="28" rx="14" ry="8"/>
+    </g>
+    <g fill="#D7F0FF">
+      <circle cx="22" cy="46" r="2.2"/><circle cx="32" cy="50" r="2.2"/>
+      <circle cx="42" cy="46" r="2.2"/><circle cx="50" cy="50" r="2.2"/>
+    </g>
+  `);
+
+  if(kind==="thunder") return base(`
+    <defs>
+      <linearGradient id="cloud5_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+      <linearGradient id="bolt_${uid}" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#FFE08A"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cloud5_${uid})">
+      <ellipse cx="36" cy="24" rx="18" ry="10"/>
+      <ellipse cx="22" cy="28" rx="14" ry="8"/>
+    </g>
+    <polygon points="30,38 40,38 32,56 36,44 26,44" fill="url(#bolt_${uid})"/>
+  `);
+
+  // If we ever see a code we didn't map, don't show the grey square—show "partly"
+  return base(`
+    <defs>
+      <radialGradient id="sun2_${uid}" cx="35%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#FFF1B0"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </radialGradient>
+      <linearGradient id="cloud_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <circle cx="22" cy="24" r="10" fill="url(#sun2_${uid})"/>
+    <g fill="url(#cloud_${uid})">
+      <ellipse cx="38" cy="34" rx="18" ry="10"/>
+      <ellipse cx="24" cy="38" rx="14" ry="8"/>
+    </g>
+  `);
+}
+
 
     function weatherCodeToText(code){
       const map = {0:"CLEAR",1:"MOSTLY CLEAR",2:"PARTLY CLOUDY",3:"OVERCAST",45:"FOG",48:"RIME FOG",
