@@ -1,421 +1,425 @@
-<script>
-  // Location: Anaheim, CA
-  const HALIFAX = { lat: 33.8366, lon: -117.9143, tz: "America/Los_Angeles", label: "Anaheim, California" };
+// Location: Anaheim, CA
+const HALIFAX = { lat: 33.8366, lon: -117.9143, tz: "America/Los_Angeles", label: "Anaheim, California" };
 
-  // ✅ Fix for grey/blank SVG icons: unique IDs inside every inline SVG
-  let __svgId = 0;
+// ✅ Fix for grey/blank SVG icons: unique IDs inside every inline SVG
+let __svgId = 0;
 
-  function tickClock(){
-    const d = new Date();
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    document.getElementById('clock').childNodes[0].textContent = `${hh}:${mm}\n      `;
-    document.getElementById('clockDate').textContent =
-      d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' }).toUpperCase();
+function showFatal(err) {
+  console.error(err);
+  // Try to show something on screen even if layout failed
+  const div = document.createElement("div");
+  div.style.position = "fixed";
+  div.style.inset = "12px";
+  div.style.zIndex = "99999";
+  div.style.background = "#0b1a33";
+  div.style.border = "1px solid rgba(255,255,255,.25)";
+  div.style.borderRadius = "16px";
+  div.style.padding = "14px 16px";
+  div.style.color = "white";
+  div.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  div.style.boxShadow = "0 18px 44px rgba(0,0,0,.45)";
+  div.innerHTML = `
+    <div style="font-weight:900;letter-spacing:.4px;text-transform:uppercase;">Weather Board Error</div>
+    <div style="opacity:.85;margin-top:8px;font-size:13px;line-height:1.35;">
+      ${String(err && err.message ? err.message : err)}
+    </div>
+    <div style="opacity:.75;margin-top:10px;font-size:12px;">
+      Open DevTools Console to see full details.
+    </div>
+  `;
+  document.body.appendChild(div);
+}
+
+function safeEl(id) {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Missing element #${id}. (Did the HTML change?)`);
+  return el;
+}
+
+function tickClock(){
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  safeEl('clock').childNodes[0].textContent = `${hh}:${mm}\n      `;
+  safeEl('clockDate').textContent =
+    d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' }).toUpperCase();
+}
+
+function svgFor(code, size=110){
+  __svgId += 1;
+  const uid = __svgId;
+
+  const fog=[45,48], drizzle=[51,53,55,56,57], rain=[61,63,65,66,67,80,81,82],
+        snow=[71,73,75,77,85,86], thunder=[95,96,99];
+
+  let kind="clear";
+  if(fog.includes(code)) kind="fog";
+  else if(drizzle.includes(code)) kind="drizzle";
+  else if(rain.includes(code)) kind="rain";
+  else if(snow.includes(code)) kind="snow";
+  else if(thunder.includes(code)) kind="thunder";
+  else if(code===2||code===3||code===1) kind="partly";
+
+  const base = (inner) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+
+  if(kind==="clear") return base(`
+    <defs>
+      <radialGradient id="sun_${uid}" cx="35%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#FFF1B0"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </radialGradient>
+    </defs>
+    <circle cx="32" cy="32" r="14" fill="url(#sun_${uid})"/>
+    <g stroke="#FFCF5A" stroke-width="2" stroke-linecap="round" opacity=".95">
+      <path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>
+      <path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>
+    </g>
+  `);
+
+  if(kind==="partly") return base(`
+    <defs>
+      <radialGradient id="sun2_${uid}" cx="35%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#FFF1B0"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </radialGradient>
+      <linearGradient id="cloud_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <circle cx="22" cy="24" r="10" fill="url(#sun2_${uid})"/>
+    <g fill="url(#cloud_${uid})">
+      <ellipse cx="38" cy="34" rx="18" ry="10"/>
+      <ellipse cx="24" cy="38" rx="14" ry="8"/>
+    </g>
+  `);
+
+  if(kind==="fog") return base(`
+    <defs>
+      <linearGradient id="fg_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <rect x="10" y="14" width="44" height="36" rx="16" fill="url(#fg_${uid})" opacity=".95"/>
+    <g fill="#9FB6D8" opacity=".98">
+      <rect x="12" y="26" width="40" height="4" rx="2"/>
+      <rect x="10" y="34" width="44" height="4" rx="2"/>
+      <rect x="14" y="42" width="36" height="4" rx="2"/>
+    </g>
+  `);
+
+  if(kind==="rain") return base(`
+    <defs>
+      <linearGradient id="cloud3_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+      <linearGradient id="drop_${uid}" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#36C2FF"/>
+        <stop offset="1" stop-color="#2563EB"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cloud3_${uid})">
+      <ellipse cx="36" cy="24" rx="18" ry="10"/>
+      <ellipse cx="22" cy="28" rx="14" ry="8"/>
+    </g>
+    <g fill="url(#drop_${uid})">
+      <path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+      <path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+      <path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
+    </g>
+  `);
+
+  if(kind==="snow") return base(`
+    <defs>
+      <linearGradient id="cloud4_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cloud4_${uid})">
+      <ellipse cx="36" cy="24" rx="18" ry="10"/>
+      <ellipse cx="22" cy="28" rx="14" ry="8"/>
+    </g>
+    <g fill="#D7F0FF">
+      <circle cx="22" cy="46" r="2.2"/><circle cx="32" cy="50" r="2.2"/>
+      <circle cx="42" cy="46" r="2.2"/><circle cx="50" cy="50" r="2.2"/>
+    </g>
+  `);
+
+  if(kind==="thunder") return base(`
+    <defs>
+      <linearGradient id="cloud5_${uid}" x1="0" x2="1">
+        <stop offset="0" stop-color="#EAF2FF"/>
+        <stop offset="1" stop-color="#BFD8FF"/>
+      </linearGradient>
+      <linearGradient id="bolt_${uid}" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#FFE08A"/>
+        <stop offset="1" stop-color="#FFB020"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cloud5_${uid})">
+      <ellipse cx="36" cy="24" rx="18" ry="10"/>
+      <ellipse cx="22" cy="28" rx="14" ry="8"/>
+    </g>
+    <polygon points="30,38 40,38 32,56 36,44 26,44" fill="url(#bolt_${uid})"/>
+  `);
+
+  return base(`<rect x="10" y="10" width="44" height="44" rx="16" fill="#BFD8FF"/>`);
+}
+
+function weatherCodeToText(code){
+  const map = {0:"CLEAR",1:"MOSTLY CLEAR",2:"PARTLY CLOUDY",3:"OVERCAST",45:"FOG",48:"RIME FOG",
+    51:"LIGHT DRIZZLE",53:"DRIZZLE",55:"HEAVY DRIZZLE",56:"FREEZING DRIZZLE",57:"HEAVY FREEZING DRIZZLE",
+    61:"LIGHT RAIN",63:"RAIN",65:"HEAVY RAIN",66:"FREEZING RAIN",67:"HEAVY FREEZING RAIN",
+    71:"LIGHT SNOW",73:"SNOW",75:"HEAVY SNOW",77:"SNOW GRAINS",
+    80:"RAIN SHOWERS",81:"SHOWERS",82:"STRONG SHOWERS",
+    85:"SNOW SHOWERS",86:"HEAVY SNOW SHOWERS",95:"THUNDERSTORM",96:"T-STORM WITH HAIL",99:"SEVERE T-STORM"};
+  return map[code] ?? `WEATHER (${code})`;
+}
+function dayLabel(isoDate){ return new Date(isoDate+"T00:00:00").toLocaleDateString([], {weekday:"short"}).toUpperCase(); }
+function windDirText(deg){
+  if(deg==null || isNaN(deg)) return "—";
+  const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(deg/22.5)%16];
+}
+function uvHint(uv){
+  if(uv==null||isNaN(uv)) return "—";
+  if(uv<3) return "LOW"; if(uv<6) return "MOD"; if(uv<8) return "HIGH"; if(uv<11) return "V HIGH"; return "EXTREME";
+}
+function headlineFor(c){
+  const code=c.weather_code, wind=c.wind_speed_10m??0, precip=c.precipitation??0;
+  if([95,96,99].includes(code)) return "ALERT: THUNDERSTORM CONDITIONS";
+  if(precip>=2) return "WET ROADS: MODERATE RAIN POSSIBLE";
+  if([71,73,75,85,86].includes(code)) return "WINTRY: SNOW SHOWERS IN THE AREA";
+  if([45,48].includes(code)) return "VISIBILITY: PATCHY FOG";
+  if(wind>=35) return "BREEZY: GUSTY WINDS EXPECTED";
+  if(code===0) return "CLEAR SKIES: GREAT CONDITIONS";
+  return "WEATHER UPDATE: STAY PREPARED";
+}
+
+function findStartIndex(times){
+  const now = new Date();
+  const nowKey = now.toISOString().slice(0,10) + "T" + String(now.getHours()).padStart(2,"0");
+  let start = 0;
+  for(let i=0;i<times.length;i++){
+    if(times[i].slice(0,13) >= nowKey){ start=i; break; }
   }
-  tickClock(); setInterval(tickClock, 1000);
+  return start;
+}
 
-  function svgFor(code, size=110){
-    __svgId += 1;
-    const uid = __svgId;
+function setNowLineToFirstBar(){
+  const line = document.getElementById("nowLine");
+  if(!line) return;
+  line.style.left = `calc(10px + (100% - 20px) / 12 * 0.5)`;
+}
 
-    const fog=[45,48], drizzle=[51,53,55,56,57], rain=[61,63,65,66,67,80,81,82],
-          snow=[71,73,75,77,85,86], thunder=[95,96,99];
+function renderHourly(data){
+  const hourlyEl=safeEl("hourly");
+  hourlyEl.innerHTML="";
 
-    let kind="clear";
-    if(fog.includes(code)) kind="fog";
-    else if(drizzle.includes(code)) kind="drizzle";
-    else if(rain.includes(code)) kind="rain";
-    else if(snow.includes(code)) kind="snow";
-    else if(thunder.includes(code)) kind="thunder";
-    else if(code===2||code===3||code===1) kind="partly";
+  const times=data.hourly?.time || [];
+  const temp=data.hourly?.temperature_2m || [];
+  const code=data.hourly?.weather_code || [];
+  const precipMM = data.hourly?.precipitation;
+  const precipProb = data.hourly?.precipitation_probability;
 
-    const base = (inner) =>
-      `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  const start = findStartIndex(times);
 
-    if(kind==="clear") return base(`
-      <defs>
-        <radialGradient id="sun_${uid}" cx="35%" cy="35%" r="70%">
-          <stop offset="0" stop-color="#FFF1B0"/>
-          <stop offset="1" stop-color="#FFB020"/>
-        </radialGradient>
-      </defs>
-      <circle cx="32" cy="32" r="14" fill="url(#sun_${uid})"/>
-      <g stroke="#FFCF5A" stroke-width="2" stroke-linecap="round" opacity=".95">
-        <path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>
-        <path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>
-      </g>
-    `);
+  for(let i=start;i<Math.min(start+12,times.length);i++){
+    const t = new Date(times[i]);
+    const label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const pmm = Number(precipMM?.[i] ?? 0);
+    const ppr = precipProb?.[i];
+    const mini = (ppr != null && !isNaN(ppr)) ? `POP ${Math.round(ppr)}%` : `P ${pmm.toFixed(1)} mm`;
 
-    if(kind==="partly") return base(`
-      <defs>
-        <radialGradient id="sun2_${uid}" cx="35%" cy="35%" r="70%">
-          <stop offset="0" stop-color="#FFF1B0"/>
-          <stop offset="1" stop-color="#FFB020"/>
-        </radialGradient>
-        <linearGradient id="cloud_${uid}" x1="0" x2="1">
-          <stop offset="0" stop-color="#EAF2FF"/>
-          <stop offset="1" stop-color="#BFD8FF"/>
-        </linearGradient>
-      </defs>
-      <circle cx="22" cy="24" r="10" fill="url(#sun2_${uid})"/>
-      <g fill="url(#cloud_${uid})">
-        <ellipse cx="38" cy="34" rx="18" ry="10"/>
-        <ellipse cx="24" cy="38" rx="14" ry="8"/>
-      </g>
-    `);
-
-    if(kind==="fog") return base(`
-      <defs>
-        <linearGradient id="fg_${uid}" x1="0" x2="1">
-          <stop offset="0" stop-color="#EAF2FF"/>
-          <stop offset="1" stop-color="#BFD8FF"/>
-        </linearGradient>
-      </defs>
-      <rect x="10" y="14" width="44" height="36" rx="16" fill="url(#fg_${uid})" opacity=".95"/>
-      <g fill="#9FB6D8" opacity=".98">
-        <rect x="12" y="26" width="40" height="4" rx="2"/>
-        <rect x="10" y="34" width="44" height="4" rx="2"/>
-        <rect x="14" y="42" width="36" height="4" rx="2"/>
-      </g>
-    `);
-
-    if(kind==="rain") return base(`
-      <defs>
-        <linearGradient id="cloud3_${uid}" x1="0" x2="1">
-          <stop offset="0" stop-color="#EAF2FF"/>
-          <stop offset="1" stop-color="#BFD8FF"/>
-        </linearGradient>
-        <linearGradient id="drop_${uid}" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#36C2FF"/>
-          <stop offset="1" stop-color="#2563EB"/>
-        </linearGradient>
-      </defs>
-      <g fill="url(#cloud3_${uid})">
-        <ellipse cx="36" cy="24" rx="18" ry="10"/>
-        <ellipse cx="22" cy="28" rx="14" ry="8"/>
-      </g>
-      <g fill="url(#drop_${uid})">
-        <path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
-        <path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
-        <path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>
-      </g>
-    `);
-
-    if(kind==="snow") return base(`
-      <defs>
-        <linearGradient id="cloud4_${uid}" x1="0" x2="1">
-          <stop offset="0" stop-color="#EAF2FF"/>
-          <stop offset="1" stop-color="#BFD8FF"/>
-        </linearGradient>
-      </defs>
-      <g fill="url(#cloud4_${uid})">
-        <ellipse cx="36" cy="24" rx="18" ry="10"/>
-        <ellipse cx="22" cy="28" rx="14" ry="8"/>
-      </g>
-      <g fill="#D7F0FF">
-        <circle cx="22" cy="46" r="2.2"/><circle cx="32" cy="50" r="2.2"/>
-        <circle cx="42" cy="46" r="2.2"/><circle cx="50" cy="50" r="2.2"/>
-      </g>
-    `);
-
-    if(kind==="thunder") return base(`
-      <defs>
-        <linearGradient id="cloud5_${uid}" x1="0" x2="1">
-          <stop offset="0" stop-color="#EAF2FF"/>
-          <stop offset="1" stop-color="#BFD8FF"/>
-        </linearGradient>
-        <linearGradient id="bolt_${uid}" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#FFE08A"/>
-          <stop offset="1" stop-color="#FFB020"/>
-        </linearGradient>
-      </defs>
-      <g fill="url(#cloud5_${uid})">
-        <ellipse cx="36" cy="24" rx="18" ry="10"/>
-        <ellipse cx="22" cy="28" rx="14" ry="8"/>
-      </g>
-      <polygon points="30,38 40,38 32,56 36,44 26,44" fill="url(#bolt_${uid})"/>
-    `);
-
-    return base(`<rect x="10" y="10" width="44" height="44" rx="16" fill="#BFD8FF"/>`);
+    const item=document.createElement("div");
+    item.className="h-item";
+    item.innerHTML=`
+      <div class="h-time">${label}</div>
+      <div class="h-ico">${svgFor(code[i], 40)}</div>
+      <div class="h-temp">${Math.round(temp[i])}°</div>
+      <div class="h-mini">${mini}</div>
+    `;
+    hourlyEl.appendChild(item);
   }
 
-  function weatherCodeToText(code){
-    const map = {0:"CLEAR",1:"MOSTLY CLEAR",2:"PARTLY CLOUDY",3:"OVERCAST",45:"FOG",48:"RIME FOG",
-      51:"LIGHT DRIZZLE",53:"DRIZZLE",55:"HEAVY DRIZZLE",56:"FREEZING DRIZZLE",57:"HEAVY FREEZING DRIZZLE",
-      61:"LIGHT RAIN",63:"RAIN",65:"HEAVY RAIN",66:"FREEZING RAIN",67:"HEAVY FREEZING RAIN",
-      71:"LIGHT SNOW",73:"SNOW",75:"HEAVY SNOW",77:"SNOW GRAINS",
-      80:"RAIN SHOWERS",81:"SHOWERS",82:"STRONG SHOWERS",
-      85:"SNOW SHOWERS",86:"HEAVY SNOW SHOWERS",95:"THUNDERSTORM",96:"T-STORM WITH HAIL",99:"SEVERE T-STORM"};
-    return map[code] ?? `WEATHER (${code})`;
+  const bars=safeEl("bars");
+  const labels=safeEl("barLabels");
+  const banner=safeEl("precipBanner");
+  const mode=safeEl("precipMode");
+
+  bars.innerHTML="";
+  labels.innerHTML="";
+
+  let series = null;
+  let isProb = false;
+
+  if (Array.isArray(precipProb) && precipProb.length) {
+    series = precipProb.map(v => Number(v ?? 0));
+    isProb = true;
+    mode.textContent = "% (POP)";
+  } else if (Array.isArray(precipMM) && precipMM.length) {
+    series = precipMM.map(v => Number(v ?? 0));
+    isProb = false;
+    mode.textContent = "mm";
+  } else {
+    series = null;
+    mode.textContent = "—";
   }
 
-  function dayLabel(isoDate){
-    return new Date(isoDate+"T00:00:00").toLocaleDateString([], {weekday:"short"}).toUpperCase();
-  }
-
-  function windDirText(deg){
-    if(deg==null || isNaN(deg)) return "—";
-    const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
-    return dirs[Math.round(deg/22.5)%16];
-  }
-
-  function uvHint(uv){
-    if(uv==null||isNaN(uv)) return "—";
-    if(uv<3) return "LOW";
-    if(uv<6) return "MOD";
-    if(uv<8) return "HIGH";
-    if(uv<11) return "V HIGH";
-    return "EXTREME";
-  }
-
-  function headlineFor(c){
-    const code=c.weather_code, wind=c.wind_speed_10m??0, precip=c.precipitation??0;
-    if([95,96,99].includes(code)) return "ALERT: THUNDERSTORM CONDITIONS";
-    if(precip>=2) return "WET ROADS: MODERATE RAIN POSSIBLE";
-    if([71,73,75,85,86].includes(code)) return "WINTRY: SNOW SHOWERS IN THE AREA";
-    if([45,48].includes(code)) return "VISIBILITY: PATCHY FOG";
-    if(wind>=35) return "BREEZY: GUSTY WINDS EXPECTED";
-    if(code===0) return "CLEAR SKIES: GREAT CONDITIONS";
-    return "WEATHER UPDATE: STAY PREPARED";
-  }
-
-  // NOTE: Open-Meteo returns hourly times already in the requested timezone (string like "2026-02-16T09:00")
-  // We'll pick the first timestamp whose YYYY-MM-DDTHH is >= *local* "now" (browser time).
-  function findStartIndex(times){
-    const now = new Date();
-    const nowKey = now.toISOString().slice(0,10) + "T" + String(now.getHours()).padStart(2,"0");
-    let start = 0;
-    for(let i=0;i<times.length;i++){
-      if(times[i].slice(0,13) >= nowKey){ start=i; break; }
-    }
-    return start;
-  }
-
-  function setNowLineToFirstBar(){
-    const line = document.getElementById("nowLine");
-    if(!line) return;
-    line.style.left = `calc(10px + (100% - 20px) / 12 * 0.5)`; // center of first column
-  }
-
-  function renderHourly(data){
-    const hourlyEl=document.getElementById("hourly");
-    hourlyEl.innerHTML="";
-
-    const times=data.hourly?.time || [];
-    const temp=data.hourly?.temperature_2m || [];
-    const code=data.hourly?.weather_code || [];
-
-    const precipMM = data.hourly?.precipitation;                  // mm
-    const precipProb = data.hourly?.precipitation_probability;    // %
-
-    const start = findStartIndex(times);
-
-    // Hourly tiles (12)
-    for(let i=start;i<Math.min(start+12,times.length);i++){
-      const t = new Date(times[i]);
-      const label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-      const pmm = Number(precipMM?.[i] ?? 0);
-      const ppr = precipProb?.[i];
-      const mini = (ppr != null && !isNaN(ppr))
-        ? `POP ${Math.round(ppr)}%`
-        : `P ${pmm.toFixed(1)} mm`;
-
-      const item=document.createElement("div");
-      item.className="h-item";
-      item.innerHTML=`
-        <div class="h-time">${label}</div>
-        <div class="h-ico">${svgFor(code[i], 40)}</div>
-        <div class="h-temp">${Math.round(temp[i])}°</div>
-        <div class="h-mini">${mini}</div>
-      `;
-      hourlyEl.appendChild(item);
-    }
-
-    // Precipitation panel (force POP when available)
-    const bars=document.getElementById("bars");
-    const labels=document.getElementById("barLabels");
-    const banner=document.getElementById("precipBanner");
-    const mode=document.getElementById("precipMode");
-
-    bars.innerHTML="";
-    labels.innerHTML="";
-
-    let series = null;
-    let isProb = false;
-
-    if (Array.isArray(precipProb) && precipProb.length) {
-      series = precipProb.map(v => Number(v ?? 0));
-      isProb = true;
-      mode.textContent = "% (POP)";
-    } else if (Array.isArray(precipMM) && precipMM.length) {
-      series = precipMM.map(v => Number(v ?? 0));
-      isProb = false;
-      mode.textContent = "mm";
-    } else {
-      series = null;
-      mode.textContent = "—";
-    }
-
-    if(!series){
-      banner.textContent = "PRECIP DATA NOT AVAILABLE";
-      for(let k=0;k<12;k++){
-        const b=document.createElement("div");
-        b.className="bar";
-        b.style.height="34px";
-        b.innerHTML = `<div class="bar-value">--</div>`;
-        bars.appendChild(b);
-
-        const lab=document.createElement("span");
-        lab.textContent = (k % 2 === 0) ? "--" : "";
-        labels.appendChild(lab);
-      }
-      setNowLineToFirstBar();
-      return;
-    }
-
-    // Build 12-hour slice starting at "start"
-    const slice = [];
-    for (let i=start; i<Math.min(start+12, times.length); i++) slice.push(Number(series[i] ?? 0));
-    while (slice.length < 12) slice.push(0);
-
-    const max = Math.max(...slice, 0);
-
-    banner.textContent = isProb
-      ? (max < 5 ? "LOW CHANCE OF PRECIP (NEXT 12H)" : `MAX POP ${Math.round(max)}% (NEXT 12H)`)
-      : (max < 0.1 ? "NO PRECIP EXPECTED (NEXT 12H)" : `MAX ${max.toFixed(1)} MM (NEXT 12H)`);
-
-    // Scaling: keep visible even when quiet
-    const scaleMax = isProb ? Math.max(20, max) : (max < 0.1 ? 1.0 : max);
-
+  if(!series){
+    banner.textContent = "PRECIP DATA NOT AVAILABLE";
     for(let k=0;k<12;k++){
-      const val = Number(slice[k] ?? 0);
-
-      // Baseline height so bars never look like dots
-      const h = Math.max(34, Math.round((val/scaleMax)*120));
-
       const b=document.createElement("div");
       b.className="bar";
-      b.style.height=`${Math.min(140,h)}px`;
-
-      // Glow tiers (still all-blue)
-      if(isProb){
-        if(val >= 60) b.classList.add("heavy");
-        else if(val >= 30) b.classList.add("moderate");
-      } else {
-        if(val >= 3) b.classList.add("heavy");
-        else if(val >= 1) b.classList.add("moderate");
-      }
-
-      // Numeric overlay
-      const txt = isProb ? `${Math.round(val)}%` : `${val.toFixed(1)}`;
-      b.innerHTML = `<div class="bar-value">${txt}</div>`;
+      b.style.height="34px";
+      b.innerHTML = `<div class="bar-value">--</div>`;
       bars.appendChild(b);
 
-      // Hour labels (every other)
-      const i = start + k;
       const lab=document.createElement("span");
-      if(i < times.length){
-        const t = new Date(times[i]);
-        const hh = String(t.getHours()).padStart(2,"0");
-        lab.textContent = (k % 2 === 0) ? hh : "";
-      } else {
-        lab.textContent = (k % 2 === 0) ? "--" : "";
-      }
+      lab.textContent = (k % 2 === 0) ? "--" : "";
       labels.appendChild(lab);
     }
-
     setNowLineToFirstBar();
+    return;
   }
 
-  function renderForecast(data){
-    const el=document.getElementById("forecast");
-    el.innerHTML="";
+  const slice = [];
+  for (let i=start; i<Math.min(start+12, times.length); i++) slice.push(Number(series[i] ?? 0));
+  while (slice.length < 12) slice.push(0);
 
-    const times=data.daily.time;
-    const tmax=data.daily.temperature_2m_max;
-    const tmin=data.daily.temperature_2m_min;
-    const code=data.daily.weather_code;
-    const psum=data.daily.precipitation_sum;
+  const max = Math.max(...slice, 0);
 
-    for(let i=0;i<Math.min(7,times.length);i++){
-      const tile=document.createElement("div");
-      tile.className="f-tile";
-      tile.innerHTML=`
-        <div>
-          <div class="f-day">${dayLabel(times[i])}</div>
-          <div class="f-sub">P ${(psum[i] ?? 0).toFixed(1)} mm</div>
-        </div>
-        <div class="f-ico">${svgFor(code[i], 36)}</div>
-        <div>
-          <div class="f-desc">${weatherCodeToText(code[i])}</div>
-          <div class="f-sub">${(psum[i] ?? 0) > 1 ? "WET PERIOD" : "LOW PRECIP"}</div>
-        </div>
-        <div class="f-temps">${Math.round(tmax[i])}° / ${Math.round(tmin[i])}°</div>
-      `;
-      el.appendChild(tile);
+  banner.textContent = isProb
+    ? (max < 5 ? "LOW CHANCE OF PRECIP (NEXT 12H)" : `MAX POP ${Math.round(max)}% (NEXT 12H)`)
+    : (max < 0.1 ? "NO PRECIP EXPECTED (NEXT 12H)" : `MAX ${max.toFixed(1)} MM (NEXT 12H)`);
+
+  const scaleMax = isProb ? Math.max(20, max) : (max < 0.1 ? 1.0 : max);
+
+  for(let k=0;k<12;k++){
+    const val = Number(slice[k] ?? 0);
+    const h = Math.max(34, Math.round((val/scaleMax)*120));
+
+    const b=document.createElement("div");
+    b.className="bar";
+    b.style.height=`${Math.min(140,h)}px`;
+
+    if(isProb){
+      if(val >= 60) b.classList.add("heavy");
+      else if(val >= 30) b.classList.add("moderate");
+    } else {
+      if(val >= 3) b.classList.add("heavy");
+      else if(val >= 1) b.classList.add("moderate");
     }
-  }
 
-  async function loadWeather(){
-    const {lat,lon,tz,label}=HALIFAX;
-    document.getElementById("placeLabel").textContent = label;
+    const txt = isProb ? `${Math.round(val)}%` : `${val.toFixed(1)}`;
+    b.innerHTML = `<div class="bar-value">${txt}</div>`;
+    bars.appendChild(b);
 
-    const url =
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
-      `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,cloud_cover,uv_index,pressure_msl`+
-      `&hourly=temperature_2m,weather_code,precipitation,precipitation_probability`+
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum`+
-      `&timezone=${encodeURIComponent(tz)}`;
-
-    const res = await fetch(url, {cache:"no-store"});
-    if(!res.ok) throw new Error("Weather fetch failed");
-    const data = await res.json();
-    const c = data.current;
-
-    document.getElementById("temp").textContent = Math.round(c.temperature_2m);
-    document.getElementById("apparent").textContent = Math.round(c.apparent_temperature);
-    document.getElementById("wind").textContent = Math.round(c.wind_speed_10m);
-    document.getElementById("windDir").textContent = windDirText(c.wind_direction_10m);
-    document.getElementById("precip").textContent = (c.precipitation ?? 0).toFixed(1);
-
-    document.getElementById("humidity").textContent = Math.round(c.relative_humidity_2m ?? 0);
-    document.getElementById("cloud").textContent = Math.round(c.cloud_cover ?? 0);
-    document.getElementById("uv").textContent = (c.uv_index ?? 0).toFixed(1);
-    document.getElementById("uvHint").textContent = uvHint(c.uv_index);
-
-    document.getElementById("gust").textContent = Math.round(c.wind_gusts_10m ?? 0);
-    document.getElementById("press").textContent = Math.round(c.pressure_msl ?? 0);
-
-    document.getElementById("wxText").textContent = weatherCodeToText(c.weather_code);
-    document.getElementById("wxIcon").innerHTML = svgFor(c.weather_code, 118);
-    document.getElementById("headline").textContent = headlineFor(c);
-
-    document.getElementById("todayP").textContent =
-      (data.daily?.precipitation_sum?.[0] ?? 0).toFixed(1);
-
-    const updated = new Date(c.time);
-    document.getElementById("wxUpdated").textContent =
-      `UPDATED ${updated.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-
-    renderHourly(data);
-    renderForecast(data);
-
-    document.getElementById("status").textContent = "ONLINE";
-  }
-
-  async function init(){
-    try{
-      await loadWeather();
-    }catch(e){
-      document.getElementById("status").textContent="OFFLINE / BLOCKED";
-      document.getElementById("wxText").textContent="UNABLE TO LOAD WEATHER";
-      document.getElementById("headline").textContent="CHECK NETWORK ACCESS TO api.open-meteo.com";
-      document.getElementById("precipBanner").textContent="PRECIP DATA NOT AVAILABLE";
-      document.getElementById("precipMode").textContent="—";
+    const i = start + k;
+    const lab=document.createElement("span");
+    if(i < times.length){
+      const t = new Date(times[i]);
+      const hh = String(t.getHours()).padStart(2,"0");
+      lab.textContent = (k % 2 === 0) ? hh : "";
+    } else {
+      lab.textContent = (k % 2 === 0) ? "--" : "";
     }
+    labels.appendChild(lab);
+  }
+
+  setNowLineToFirstBar();
+}
+
+function renderForecast(data){
+  const el=safeEl("forecast");
+  el.innerHTML="";
+
+  const times=data.daily.time;
+  const tmax=data.daily.temperature_2m_max;
+  const tmin=data.daily.temperature_2m_min;
+  const code=data.daily.weather_code;
+  const psum=data.daily.precipitation_sum;
+
+  for(let i=0;i<Math.min(7,times.length);i++){
+    const tile=document.createElement("div");
+    tile.className="f-tile";
+    tile.innerHTML=`
+      <div>
+        <div class="f-day">${dayLabel(times[i])}</div>
+        <div class="f-sub">P ${(psum[i] ?? 0).toFixed(1)} mm</div>
+      </div>
+      <div class="f-ico">${svgFor(code[i], 36)}</div>
+      <div>
+        <div class="f-desc">${weatherCodeToText(code[i])}</div>
+        <div class="f-sub">${(psum[i] ?? 0) > 1 ? "WET PERIOD" : "LOW PRECIP"}</div>
+      </div>
+      <div class="f-temps">${Math.round(tmax[i])}° / ${Math.round(tmin[i])}°</div>
+    `;
+    el.appendChild(tile);
+  }
+}
+
+async function loadWeather(){
+  const {lat,lon,tz,label}=HALIFAX;
+  safeEl("placeLabel").textContent = label;
+
+  const url =
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
+    `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,cloud_cover,uv_index,pressure_msl`+
+    `&hourly=temperature_2m,weather_code,precipitation,precipitation_probability`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum`+
+    `&timezone=${encodeURIComponent(tz)}`;
+
+  const res = await fetch(url, {cache:"no-store"});
+  if(!res.ok) throw new Error("Weather fetch failed");
+  const data = await res.json();
+  const c = data.current;
+
+  safeEl("temp").textContent = Math.round(c.temperature_2m);
+  safeEl("apparent").textContent = Math.round(c.apparent_temperature);
+  safeEl("wind").textContent = Math.round(c.wind_speed_10m);
+  safeEl("windDir").textContent = windDirText(c.wind_direction_10m);
+  safeEl("precip").textContent = (c.precipitation ?? 0).toFixed(1);
+
+  safeEl("humidity").textContent = Math.round(c.relative_humidity_2m ?? 0);
+  safeEl("cloud").textContent = Math.round(c.cloud_cover ?? 0);
+  safeEl("uv").textContent = (c.uv_index ?? 0).toFixed(1);
+  safeEl("uvHint").textContent = uvHint(c.uv_index);
+
+  safeEl("gust").textContent = Math.round(c.wind_gusts_10m ?? 0);
+  safeEl("press").textContent = Math.round(c.pressure_msl ?? 0);
+
+  safeEl("wxText").textContent = weatherCodeToText(c.weather_code);
+  safeEl("wxIcon").innerHTML = svgFor(c.weather_code, 118);
+  safeEl("headline").textContent = headlineFor(c);
+
+  safeEl("todayP").textContent = (data.daily?.precipitation_sum?.[0] ?? 0).toFixed(1);
+
+  const updated = new Date(c.time);
+  safeEl("wxUpdated").textContent =
+    `UPDATED ${updated.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+
+  renderHourly(data);
+  renderForecast(data);
+
+  safeEl("status").textContent = "ONLINE";
+}
+
+function start(){
+  try{
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    loadWeather().catch(showFatal);
     setInterval(() => loadWeather().catch(()=>{}), 5*60*1000);
+  }catch(e){
+    showFatal(e);
   }
+}
 
-  init();
-</script>
+// ✅ run after DOM exists
+document.addEventListener("DOMContentLoaded", start);
