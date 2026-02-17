@@ -180,18 +180,15 @@
     .h-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;}
     .h-head h2{margin:0;font-size:14px;font-weight:950;letter-spacing:.8px;text-transform:uppercase;color:#fff;}
 
-    /* ===== Hourly strip becomes a horizontal scroller so "now" can be centered ===== */
     .h-strip{
-      display:flex;
+      display:grid;
+      grid-template-columns: repeat(var(--slots), 1fr);
       gap:8px;
       padding:10px 10px 6px;
       border-radius:16px;
       background: rgba(0,0,0,.10);
       border:1px solid rgba(255,255,255,.10);
-      overflow-x:auto;
-      overflow-y:hidden;
-      scroll-behavior:smooth;
-      overscroll-behavior-x: contain;
+      overflow:hidden;
     }
     .h-item{
       border-radius:18px;
@@ -200,11 +197,11 @@
       padding:10px 8px 8px;
       text-align:center;
       min-width:0;
-      flex: 0 0 92px; /* fixed width for predictable centering */
     }
     .h-time{color:var(--muted);font-size:12px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
     .h-ico{height:44px;display:flex;align-items:center;justify-content:center;margin:6px 0;}
     .h-temp{font-size:18px;font-weight:1000;font-variant-numeric: tabular-nums;color:#fff;}
+    .h-mini{margin-top:4px;font-size:11px;color:var(--muted);font-weight:900;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
     /* ======= PRECIP PANEL ======= */
     .precip{
@@ -250,9 +247,9 @@
 
     .bars-wrap{position:relative;}
 
-    /* Bars become a horizontal scroller so "now" can be centered */
     .bars{
-      display:flex;
+      display:grid;
+      grid-template-columns: repeat(var(--slots), 1fr);
       align-items:end;
       gap:8px;
       height:140px;
@@ -261,18 +258,40 @@
       background:
         linear-gradient(to top, rgba(255,255,255,.10) 1px, transparent 1px) 0 100%/100% 28px,
         linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
-      overflow-x:auto;
-      overflow-y:hidden;
-      scroll-behavior:smooth;
-      overscroll-behavior-x: contain;
+      overflow:hidden;
       position:relative;
     }
 
-    /* Remove the NOW line entirely */
+    /* CHANGE 1: remove NOW line */
     #nowLine{ display:none !important; }
 
+    .now-line{
+      position:absolute;
+      top:10px;
+      bottom:6px;
+      left: calc(10px + (100% - 20px) / var(--slots) * 0.5);
+      width:2px;
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 0 18px rgba(255,255,255,.35);
+      border-radius: 2px;
+      pointer-events:none;
+      opacity:.85;
+      z-index:5;
+    }
+    .now-line::after{
+      content:"NOW";
+      position:absolute;
+      top:-18px;
+      left:-16px;
+      font-size:10px;
+      font-weight:1000;
+      letter-spacing:.6px;
+      color:#ffffff;
+      opacity:.95;
+      text-shadow: 0 8px 18px rgba(0,0,0,.45);
+    }
+
     .bar{
-      flex: 0 0 22px; /* fixed width for scroll alignment with labels */
       width:100%;
       border-radius:10px;
       border:1px solid rgba(255,255,255,.14);
@@ -298,11 +317,14 @@
         rgba(255,255,255,.20) 45%,
         transparent 55%);
       transform: rotate(8deg);
-      /* remove shimmer animation */
-      animation: none;
+      animation: shimmer 2.4s linear infinite;
       opacity:.55;
       mix-blend-mode: screen;
       pointer-events:none;
+    }
+    @keyframes shimmer{
+      0%{transform: translateX(-30%) rotate(8deg)}
+      100%{transform: translateX(30%) rotate(8deg)}
     }
     .bar::after{
       content:"";
@@ -349,9 +371,9 @@
       border-color: rgba(255,255,255,.18);
     }
 
-    /* Labels become a horizontal scroller that we sync to the bars scrollLeft */
     .bar-labels{
-      display:flex;
+      display:grid;
+      grid-template-columns: repeat(var(--slots), 1fr);
       gap:8px;
       margin-top:6px;
       color:var(--muted);
@@ -359,15 +381,10 @@
       font-weight:950;
       letter-spacing:.6px;
       text-transform:uppercase;
-      overflow-x:auto;
-      overflow-y:hidden;
-      scroll-behavior:smooth;
-      overscroll-behavior-x: contain;
     }
     .bar-labels span{
       text-align:center;
       min-height: 12px;
-      flex: 0 0 22px; /* match .bar width */
     }
 
     /* ======= RIGHT PANEL ======= */
@@ -406,22 +423,6 @@
       display:flex;justify-content:space-between;align-items:center;
       color:var(--muted);font-size:12px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;
       pointer-events:none;z-index:2;
-    }
-
-    /* Highlight the current hour (both hourly item + precip bar) */
-    .is-now{
-      outline: 2px solid rgba(255,255,255,.70);
-      box-shadow: 0 0 22px rgba(255,255,255,.16);
-    }
-
-    /* Hide scrollbars for TV-style look */
-    .h-strip, .bars, .bar-labels{
-      scrollbar-width: none; /* Firefox */
-    }
-    .h-strip::-webkit-scrollbar,
-    .bars::-webkit-scrollbar,
-    .bar-labels::-webkit-scrollbar{
-      display:none; /* WebKit */
     }
 
     @media (max-width: 1200px){
@@ -503,7 +504,6 @@
             </div>
 
             <div class="bars-wrap">
-              <!-- NOW line intentionally removed/hidden -->
               <div class="now-line" id="nowLine"></div>
               <div class="bars" id="bars"></div>
               <div class="bar-labels" id="barLabels"></div>
@@ -607,32 +607,10 @@
       if(node) node.textContent = txt;
     }
 
-    // 12-hour time like 7:00am / 7:00pm
-    function formatTime12(d){
-      var h = d.getHours();
-      var m = d.getMinutes();
-      var ampm = h >= 12 ? "pm" : "am";
-      h = h % 12; if(h === 0) h = 12;
-      var mm = String(m).padStart(2,"0");
-      return h + ":" + mm + ampm;
-    }
-
-    function isSameHour(a, b){
-      return a.getFullYear()===b.getFullYear() &&
-             a.getMonth()===b.getMonth() &&
-             a.getDate()===b.getDate() &&
-             a.getHours()===b.getHours();
-    }
-
-    function centerNow(container, nowSelector){
-      if(!container) return;
-      var nowEl = container.querySelector(nowSelector || ".is-now");
-      if(!nowEl) return;
-
-      var cRect = container.getBoundingClientRect();
-      var nRect = nowEl.getBoundingClientRect();
-      var delta = (nRect.left + nRect.width/2) - (cRect.left + cRect.width/2);
-      container.scrollLeft += delta;
+    function setNowLineToFirstBar(){
+      var line = document.getElementById("nowLine");
+      if(!line) return;
+      line.style.left = "calc(10px + (100% - 20px) / var(--slots) * 0.5)";
     }
 
     function svgFor(code, size){
@@ -849,30 +827,30 @@
       var precipMM = (data.hourly && data.hourly.precipitation) ? data.hourly.precipitation : [];
 
       var start = findStartIndex(times);
-      var now = new Date();
 
-      // ===== Hourly Outlook (no precip line under temp) =====
       for(var i = start; i < Math.min(start + SLOTS, times.length); i++){
         var t = new Date(times[i]);
-        var label = formatTime12(t);
+        var label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+        var pmm = Number((precipMM && precipMM[i] != null) ? precipMM[i] : 0);
+        var mini = "P " + (Math.round(pmm*10)/10).toFixed(1) + " mm";
 
         var item = document.createElement("div");
         item.className = "h-item";
-        if(isSameHour(t, now)) item.classList.add("is-now");
-
         item.innerHTML =
           '<div class="h-time">' + label + '</div>' +
           '<div class="h-ico">' + svgFor(code[i], 40) + '</div>' +
-          '<div class="h-temp">' + Math.round(Number(temp[i] || 0)) + '°</div>';
+          '<div class="h-temp">' + Math.round(Number(temp[i] || 0)) + '°</div>' +
+          '<div class="h-mini">' + mini + '</div>';
 
         hourlyEl.appendChild(item);
       }
 
-      // ===== Precip bars + labels =====
       var bars   = el("bars");
       var labels = el("barLabels");
       var banner = el("precipBanner");
       var mode   = el("precipMode");
+      var nowLine = document.getElementById("nowLine");
 
       bars.innerHTML = "";
       labels.innerHTML = "";
@@ -884,6 +862,8 @@
 
       if(!series){
         banner.textContent = "PRECIP DATA NOT AVAILABLE";
+        // CHANGE 1: keep NOW line hidden even when data missing
+        if(nowLine) nowLine.style.display = "none";
         return;
       }
 
@@ -929,13 +909,6 @@
         var b = document.createElement("div");
         b.className = "bar";
 
-        // mark current hour bar
-        var idx2 = start + k;
-        if(idx2 < times.length){
-          var bt = new Date(times[idx2]);
-          if(isSameHour(bt, now)) b.classList.add("is-now");
-        }
-
         if(isTrace){
           b.classList.add("trace");
           b.style.opacity = String(TRACE_OPACITY);
@@ -950,34 +923,34 @@
 
         toAnimate.push({ el: b, h: targetH });
 
-        // labels: full 12-hour time (every other label)
+        var idx = start + k;
         var lab = document.createElement("span");
-        if(idx2 < times.length){
-          var tt = new Date(times[idx2]);
-          lab.textContent = (k % 2 === 0) ? formatTime12(tt) : "";
+
+        if(idx < times.length){
+          var tt = new Date(times[idx]);
+
+          // CHANGE 2: 12-hour time labels like "7:00am" (every other label)
+          var hr = tt.getHours();
+          var ampm = hr >= 12 ? "pm" : "am";
+          hr = hr % 12;
+          if(hr === 0) hr = 12;
+
+          lab.textContent = (k % 2 === 0) ? (hr + ":00" + ampm) : "";
         } else {
           lab.textContent = (k % 2 === 0) ? "--" : "";
         }
+
         labels.appendChild(lab);
       }
 
-      // Animate bars in (kept; you only asked to remove rain/shimmer animations & now line)
+      // CHANGE 1: ensure NOW line is hidden
+      if(nowLine) nowLine.style.display = "none";
+
       setTimeout(function(){
         for(var n=0; n<toAnimate.length; n++){
           toAnimate[n].el.style.height = String(toAnimate[n].h) + "px";
         }
       }, 60);
-
-      // Keep bar labels aligned with bars scroll
-      bars.onscroll = function(){
-        labels.scrollLeft = bars.scrollLeft;
-      };
-      labels.scrollLeft = bars.scrollLeft;
-
-      // Center the current hour in both panels
-      centerNow(hourlyEl, ".is-now");
-      centerNow(bars, ".is-now");
-      labels.scrollLeft = bars.scrollLeft;
     }
 
     function renderForecast(data){
