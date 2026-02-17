@@ -757,124 +757,118 @@
     }
 
     function renderHourly(data){
-      const hourlyEl = el("hourly");
-      hourlyEl.innerHTML = "";
+  const hourlyEl = el("hourly");
+  hourlyEl.innerHTML = "";
 
-      const times = data.hourly?.time || [];
-      const temp  = data.hourly?.temperature_2m || [];
-      const code  = data.hourly?.weather_code || [];
-      const precipMM   = data.hourly?.precipitation;
-      const precipProb = data.hourly?.precipitation_probability;
+  const times = data.hourly?.time || [];
+  const temp  = data.hourly?.temperature_2m || [];
+  const code  = data.hourly?.weather_code || [];
 
-      const start = findStartIndex(times);
+  // We still read these, but for the precip chart we will ONLY use precipMM (mm)
+  const precipMM   = data.hourly?.precipitation;
+  const precipProb = data.hourly?.precipitation_probability; // ignored in precip chart now
 
-      // Hourly tiles (SLOTS)
-      for(let i=start; i<Math.min(start+SLOTS, times.length); i++){
-        const t = new Date(times[i]);
-        const label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        const pmm = Number(precipMM?.[i] ?? 0);
-        const ppr = precipProb?.[i];
-        const mini = (ppr != null && !isNaN(ppr)) ? `POP ${Math.round(ppr)}%` : `P ${pmm.toFixed(1)} mm`;
+  const start = findStartIndex(times);
 
-        const item=document.createElement("div");
-        item.className="h-item";
-        item.innerHTML=`
-          <div class="h-time">${label}</div>
-          <div class="h-ico">${svgFor(code[i], 40)}</div>
-          <div class="h-temp">${Math.round(Number(temp[i] ?? 0))}°</div>
-          <div class="h-mini">${mini}</div>
-        `;
-        hourlyEl.appendChild(item);
-      }
+  // ===== Hourly tiles (SLOTS) =====
+  for(let i=start; i<Math.min(start+SLOTS, times.length); i++){
+    const t = new Date(times[i]);
+    const label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-      // Precip bars (SLOTS)
-      const bars   = el("bars");
-      const labels = el("barLabels");
-      const banner = el("precipBanner");
-      const mode   = el("precipMode");
+    const pmm = Number(precipMM?.[i] ?? 0);
+    // Keep the hourly mini line as-is (mm). If you want it to be something else, tell me.
+    const mini = `P ${pmm.toFixed(1)} mm`;
 
-      bars.innerHTML = "";
-      labels.innerHTML = "";
+    const item = document.createElement("div");
+    item.className = "h-item";
+    item.innerHTML = `
+      <div class="h-time">${label}</div>
+      <div class="h-ico">${svgFor(code[i], 40)}</div>
+      <div class="h-temp">${Math.round(Number(temp[i] ?? 0))}°</div>
+      <div class="h-mini">${mini}</div>
+    `;
+    hourlyEl.appendChild(item);
+  }
 
-      let series = null;
-      let isProb = false;
+  // ===== Precip chart (SLOTS) - ✅ ALWAYS expected precip amount (mm) =====
+  const bars   = el("bars");
+  const labels = el("barLabels");
+  const banner = el("precipBanner");
+  const mode   = el("precipMode");
 
-      if (Array.isArray(precipProb) && precipProb.length) {
-        series = precipProb.map(v => Number(v ?? 0));
-        isProb = true;
-        mode.textContent = "% (POP)";
-      } else if (Array.isArray(precipMM) && precipMM.length) {
-        series = precipMM.map(v => Number(v ?? 0));
-        isProb = false;
-        mode.textContent = "mm";
-      } else {
-        series = null;
-        mode.textContent = "—";
-      }
+  bars.innerHTML = "";
+  labels.innerHTML = "";
 
-      if(!series){
-        banner.textContent = "PRECIP DATA NOT AVAILABLE";
-        for(let k=0; k<SLOTS; k++){
-          const b=document.createElement("div");
-          b.className="bar";
-          b.style.height="34px";
-          b.innerHTML = `<div class="bar-value">--</div>`;
-          bars.appendChild(b);
+  mode.textContent = "mm";
 
-          const lab=document.createElement("span");
-          lab.textContent = (k % 2 === 0) ? "--" : "";
-          labels.appendChild(lab);
-        }
-        setNowLineToFirstBar();
-        return;
-      }
+  // Only use precipitation (mm) for the bars
+  const series = (Array.isArray(precipMM) && precipMM.length)
+    ? precipMM.map(v => Number(v ?? 0))
+    : null;
 
-      const slice = [];
-      for (let i=start; i<Math.min(start+SLOTS, times.length); i++) slice.push(Number(series[i] ?? 0));
-      while (slice.length < SLOTS) slice.push(0);
+  if(!series){
+    banner.textContent = "PRECIP DATA NOT AVAILABLE";
+    for(let k=0; k<SLOTS; k++){
+      const b = document.createElement("div");
+      b.className = "bar";
+      b.style.height = "34px";
+      b.innerHTML = `<div class="bar-value">--</div>`;
+      bars.appendChild(b);
 
-      const max = Math.max(...slice, 0);
-
-      banner.textContent = isProb
-        ? (max < 5 ? `LOW CHANCE OF PRECIP (NEXT ${SLOTS}H)` : `MAX POP ${Math.round(max)}% (NEXT ${SLOTS}H)`)
-        : (max < 0.1 ? `NO PRECIP EXPECTED (NEXT ${SLOTS}H)` : `MAX ${max.toFixed(1)} MM (NEXT ${SLOTS}H)`);
-
-      const scaleMax = isProb ? Math.max(20, max) : (max < 0.1 ? 1.0 : max);
-
-      for(let k=0; k<SLOTS; k++){
-        const val = Number(slice[k] ?? 0);
-        const h = Math.max(34, Math.round((val/scaleMax)*120));
-
-        const b=document.createElement("div");
-        b.className="bar";
-        b.style.height=`${Math.min(140,h)}px`;
-
-        if(isProb){
-          if(val >= 60) b.classList.add("heavy");
-          else if(val >= 30) b.classList.add("moderate");
-        } else {
-          if(val >= 3) b.classList.add("heavy");
-          else if(val >= 1) b.classList.add("moderate");
-        }
-
-        const txt = isProb ? `${Math.round(val)}%` : `${val.toFixed(1)}`;
-        b.innerHTML = `<div class="bar-value">${txt}</div>`;
-        bars.appendChild(b);
-
-        const i = start + k;
-        const lab=document.createElement("span");
-        if(i < times.length){
-          const t = new Date(times[i]);
-          const hh = String(t.getHours()).padStart(2,"0");
-          lab.textContent = (k % 2 === 0) ? hh : "";
-        } else {
-          lab.textContent = (k % 2 === 0) ? "--" : "";
-        }
-        labels.appendChild(lab);
-      }
-
-      setNowLineToFirstBar();
+      const lab = document.createElement("span");
+      lab.textContent = (k % 2 === 0) ? "--" : "";
+      labels.appendChild(lab);
     }
+    setNowLineToFirstBar();
+    return;
+  }
+
+  // Slice out the next SLOTS hours worth of precip (mm)
+  const slice = [];
+  for (let i=start; i<Math.min(start+SLOTS, times.length); i++){
+    slice.push(Number(series[i] ?? 0));
+  }
+  while (slice.length < SLOTS) slice.push(0);
+
+  const max = Math.max(...slice, 0);
+
+  banner.textContent =
+    (max < 0.1)
+      ? `NO PRECIP EXPECTED (NEXT ${SLOTS}H)`
+      : `MAX ${max.toFixed(1)} MM (NEXT ${SLOTS}H)`;
+
+  // Scaling: keep visible even when quiet
+  const scaleMax = (max < 0.1 ? 1.0 : max);
+
+  for(let k=0; k<SLOTS; k++){
+    const val = Number(slice[k] ?? 0);
+    const h = Math.max(34, Math.round((val / scaleMax) * 120));
+
+    const b = document.createElement("div");
+    b.className = "bar";
+    b.style.height = `${Math.min(140, h)}px`;
+
+    // mm thresholds (broadcast-ish)
+    if(val >= 3) b.classList.add("heavy");
+    else if(val >= 1) b.classList.add("moderate");
+
+    b.innerHTML = `<div class="bar-value">${val.toFixed(1)}</div>`;
+    bars.appendChild(b);
+
+    const idx = start + k;
+    const lab = document.createElement("span");
+    if(idx < times.length){
+      const tt = new Date(times[idx]);
+      const hh = String(tt.getHours()).padStart(2,"0");
+      lab.textContent = (k % 2 === 0) ? hh : "";
+    } else {
+      lab.textContent = (k % 2 === 0) ? "--" : "";
+    }
+    labels.appendChild(lab);
+  }
+
+  setNowLineToFirstBar();
+}
 
     function renderForecast(data){
       const out = el("forecast");
