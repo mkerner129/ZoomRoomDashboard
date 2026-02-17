@@ -832,7 +832,34 @@
       return start;
     }
 
-    function renderHourly(data){
+    // Slice next SLOTS hours and "zero-out" trace precip so 0.0 really means dry
+var slice = [];
+for (var j = start; j < Math.min(start + SLOTS, times.length); j++) {
+  var raw = Number(series[j] || 0);
+
+  // Treat trace amounts as zero (matches your 1-decimal display)
+  if (raw < 0.1) raw = 0;
+
+  // Keep one decimal for consistency
+  raw = Math.round(raw * 10) / 10;
+
+  slice.push(raw);
+}
+while (slice.length < SLOTS) slice.push(0);
+
+// Dry if everything is zero after trace filtering
+var anyWet = false;
+for (var m = 0; m < slice.length; m++) {
+  if (slice[m] > 0) { anyWet = true; break; }
+}
+var isDryWindow = !anyWet;
+
+// Max for scaling (only meaningful if not dry)
+var max = 0;
+for (var x = 0; x < slice.length; x++) {
+  if (slice[x] > max) max = slice[x];
+}
+function renderHourly(data){
       var hourlyEl = el("hourly");
       hourlyEl.innerHTML = "";
 
@@ -984,35 +1011,7 @@ var isDryWindow = (max === 0);
       }, 60);
     }
 
-    function renderForecast(data){
-      var out = el("forecast");
-      out.innerHTML = "";
-
-      var times = data.daily.time;
-      var tmax  = data.daily.temperature_2m_max;
-      var tmin  = data.daily.temperature_2m_min;
-      var code  = data.daily.weather_code;
-      var psum  = data.daily.precipitation_sum;
-
-      for(var i=0;i<Math.min(7,times.length);i++){
-        var tile = document.createElement("div");
-        tile.className = "f-tile";
-        tile.innerHTML =
-          '<div>' +
-            '<div class="f-day">' + dayLabel(times[i]) + '</div>' +
-            '<div class="f-sub">P ' + (Number(psum[i] || 0)).toFixed(1) + ' mm</div>' +
-          '</div>' +
-          '<div class="f-ico">' + svgFor(code[i], 36) + '</div>' +
-          '<div>' +
-            '<div class="f-desc">' + weatherCodeToText(code[i]) + '</div>' +
-            '<div class="f-sub">' + ((Number(psum[i] || 0)) > 1 ? "WET PERIOD" : "LOW PRECIP") + '</div>' +
-          '</div>' +
-          '<div class="f-temps">' + Math.round(Number(tmax[i] || 0)) + '° / ' + Math.round(Number(tmin[i] || 0)) + '°</div>';
-
-        out.appendChild(tile);
-      }
-    }
-
+  
     function loadWeather(){
       var lat = LOCATION.lat, lon = LOCATION.lon, tz = LOCATION.tz, label = LOCATION.label;
       el("placeLabel").textContent = label;
