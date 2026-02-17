@@ -180,17 +180,19 @@
     .h-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;}
     .h-head h2{margin:0;font-size:14px;font-weight:950;letter-spacing:.8px;text-transform:uppercase;color:#fff;}
 
+    /* Hourly is a grid that matches precip columns */
     .h-strip{
       display:grid;
       grid-template-columns: repeat(var(--slots), 1fr);
       gap:8px;
-      padding:10px 10px 6px;
+      padding:10px 10px 6px;     /* match .bars padding */
       border-radius:16px;
       background: rgba(0,0,0,.10);
       border:1px solid rgba(255,255,255,.10);
       overflow:hidden;
     }
     .h-item{
+      width:auto;
       border-radius:var(--tileRadius);
       border:1px solid rgba(255,255,255,.16);
       background: rgba(0,0,0,.14);
@@ -246,7 +248,6 @@
     }
 
     .bars-wrap{position:relative;}
-
     .bars{
       display:grid;
       grid-template-columns: repeat(var(--slots), 1fr);
@@ -302,10 +303,6 @@
         rgba(18,106,255,1) 100%
       );
       transform: translateZ(0);
-
-      /* ✅ animation support */
-      transition: height 900ms cubic-bezier(.22,1,.36,1), opacity 700ms ease;
-      will-change: height, opacity;
     }
     .bar::before{
       content:"";
@@ -376,32 +373,6 @@
       min-height: 12px;
     }
 
-    /* ✅ dry mode message inside precip plot area */
-    .dry-msg{
-      display:none;
-      height:140px;
-      padding:10px;
-      border-radius:16px;
-      border:1px dashed rgba(255,255,255,.18);
-      background: rgba(0,0,0,.10);
-      color: rgba(234,242,255,.92);
-      font-weight:950;
-      letter-spacing:.6px;
-      text-transform:uppercase;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-    }
-    .dry-msg small{
-      display:block;
-      margin-top:8px;
-      color: var(--muted);
-      font-weight:850;
-      letter-spacing:.6px;
-      text-transform:uppercase;
-      font-size:11px;
-    }
-
     /* ======= RIGHT PANEL ======= */
     .right{height:100%;display:grid;grid-template-rows:1fr auto;gap:16px;min-height:0;}
     .forecast{padding:18px;min-height:0;display:flex;flex-direction:column;gap:12px;}
@@ -458,7 +429,7 @@
         <div class="subtitle">
           <span id="placeLabel">Anaheim, California</span>
           <span class="pill" id="wxUpdated">Updating…</span>
-          <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
+          <span class="pill">Next update: 5 min</span>
         </div>
       </div>
     </div>
@@ -520,13 +491,6 @@
 
             <div class="bars-wrap">
               <div class="now-line" id="nowLine"></div>
-
-              <!-- ✅ shown only when dry -->
-              <div class="dry-msg" id="dryMsg">
-                NO PRECIP EXPECTED
-                <small>NEXT <span id="dryHours">12</span> HOURS</small>
-              </div>
-
               <div class="bars" id="bars"></div>
               <div class="bar-labels" id="barLabels"></div>
             </div>
@@ -573,11 +537,9 @@
   <script>
     // ====== CONFIG ======
     var LOCATION = { lat: 33.8366, lon: -117.9143, tz: "America/Los_Angeles", label: "Anaheim, California" };
-    var SLOTS = 12;
-    var REFRESH_MS = 5 * 60 * 1000;
+    var SLOTS = 12; // ✅ Hourly tiles and precip bars will match
 
     var __svgId = 0;
-    var nextRefreshAt = Date.now() + REFRESH_MS;
 
     function showFatal(err) {
       try { console.error(err); } catch(e) {}
@@ -610,16 +572,6 @@
       el('clock').childNodes[0].textContent = hh + ":" + mm + "\n      ";
       el('clockDate').textContent =
         d.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' }).toUpperCase();
-    }
-
-    function tickCountdown(){
-      var left = Math.max(0, nextRefreshAt - Date.now());
-      var s = Math.floor(left / 1000);
-      var m = Math.floor(s / 60);
-      var r = s % 60;
-      var txt = String(m).padStart(2,'0') + ":" + String(r).padStart(2,'0');
-      var node = document.getElementById("refreshIn");
-      if(node) node.textContent = txt;
     }
 
     function setNowLineToFirstBar(){
@@ -691,7 +643,9 @@
         );
       }
 
-      if(kind==="partly") return partlyFallback();
+      if(kind==="partly"){
+        return partlyFallback();
+      }
 
       if(kind==="fog"){
         return base(
@@ -832,34 +786,7 @@
       return start;
     }
 
-    // Slice next SLOTS hours and "zero-out" trace precip so 0.0 really means dry
-var slice = [];
-for (var j = start; j < Math.min(start + SLOTS, times.length); j++) {
-  var raw = Number(series[j] || 0);
-
-  // Treat trace amounts as zero (matches your 1-decimal display)
-  if (raw < 0.1) raw = 0;
-
-  // Keep one decimal for consistency
-  raw = Math.round(raw * 10) / 10;
-
-  slice.push(raw);
-}
-while (slice.length < SLOTS) slice.push(0);
-
-// Dry if everything is zero after trace filtering
-var anyWet = false;
-for (var m = 0; m < slice.length; m++) {
-  if (slice[m] > 0) { anyWet = true; break; }
-}
-var isDryWindow = !anyWet;
-
-// Max for scaling (only meaningful if not dry)
-var max = 0;
-for (var x = 0; x < slice.length; x++) {
-  if (slice[x] > max) max = slice[x];
-}
-function renderHourly(data){
+    function renderHourly(data){
       var hourlyEl = el("hourly");
       hourlyEl.innerHTML = "";
 
@@ -867,7 +794,7 @@ function renderHourly(data){
       var temp  = (data.hourly && data.hourly.temperature_2m) ? data.hourly.temperature_2m : [];
       var code  = (data.hourly && data.hourly.weather_code) ? data.hourly.weather_code : [];
 
-      // Precip array (mm) — used for chart
+      // Precip arrays
       var precipMM = (data.hourly && data.hourly.precipitation) ? data.hourly.precipitation : [];
 
       var start = findStartIndex(times);
@@ -896,98 +823,86 @@ function renderHourly(data){
       var labels = el("barLabels");
       var banner = el("precipBanner");
       var mode   = el("precipMode");
-      var nowLine = document.getElementById("nowLine");
-      var dryMsg = document.getElementById("dryMsg");
-      var dryHours = document.getElementById("dryHours");
 
       bars.innerHTML = "";
       labels.innerHTML = "";
       mode.textContent = "mm";
 
-      // Series from precipMM only
+      // Build series from precipMM only
       var series = (Array.isArray(precipMM) && precipMM.length)
         ? precipMM.map(function(v){ return Number(v || 0); })
         : null;
 
       if(!series){
         banner.textContent = "PRECIP DATA NOT AVAILABLE";
-        if(dryMsg) dryMsg.style.display = "none";
-        bars.style.display = "";
-        labels.style.display = "";
-        if(nowLine) nowLine.style.display = "";
+        bars.style.opacity = "1";
+        labels.style.opacity = "1";
+
+        for(var k0=0; k0<SLOTS; k0++){
+          var b0 = document.createElement("div");
+          b0.className = "bar";
+          b0.style.height = "34px";
+          b0.innerHTML = '<div class="bar-value">--</div>';
+          bars.appendChild(b0);
+
+          var lab0 = document.createElement("span");
+          lab0.textContent = (k0 % 2 === 0) ? "--" : "";
+          labels.appendChild(lab0);
+        }
         setNowLineToFirstBar();
         return;
       }
 
-      // Slice next SLOTS hours (round to 1 decimal so "0.0" truly behaves like zero)
-var slice = [];
-for(var j=start; j<Math.min(start + SLOTS, times.length); j++){
-  var raw = Number(series[j] || 0);
-  var rounded = Math.round(raw * 10) / 10;   // 1 decimal to match display
-  slice.push(rounded);
-}
-while(slice.length < SLOTS) slice.push(0);
+      // Slice out next SLOTS hours
+      var slice = [];
+      for(var j=start; j<Math.min(start + SLOTS, times.length); j++){
+        slice.push(Number(series[j] || 0));
+      }
+      while(slice.length < SLOTS) slice.push(0);
 
-// Compute max on the rounded values
-var max = 0;
-for(var m=0; m<slice.length; m++){
-  if(slice[m] > max) max = slice[m];
-}
-
-// Dry window if EVERYTHING rounds to 0.0
-var isDryWindow = (max === 0);
-
-
-      if(isDryWindow){
-        banner.textContent = "NO PRECIP EXPECTED (NEXT " + SLOTS + "H)";
-
-        // Hide bars/labels/now-line entirely
-        bars.style.display = "none";
-        labels.style.display = "none";
-        if(nowLine) nowLine.style.display = "none";
-
-        // Show dry message panel
-        if(dryHours) dryHours.textContent = String(SLOTS);
-        if(dryMsg){
-          dryMsg.style.display = "flex";
-        }
-        return;
+      var max = 0;
+      for(var m=0; m<slice.length; m++){
+        if(slice[m] > max) max = slice[m];
       }
 
-      // Not dry -> show bars + animate on refresh
-      if(dryMsg) dryMsg.style.display = "none";
-      bars.style.display = "";
-      labels.style.display = "";
-      if(nowLine) nowLine.style.display = "";
+      var isDryWindow = max < 0.1;
 
-      banner.textContent = "MAX " + max.toFixed(1) + " MM (NEXT " + SLOTS + "H)";
+      banner.textContent = isDryWindow
+        ? ("DRY PERIOD (NEXT " + SLOTS + "H)")
+        : ("MAX " + max.toFixed(1) + " MM (NEXT " + SLOTS + "H)");
 
-      var scaleMax = max > 0 ? max : 1.0;
+      // Fade chart slightly if completely dry
+      bars.style.opacity = isDryWindow ? "0.75" : "1";
+      labels.style.opacity = isDryWindow ? "0.85" : "1";
 
-      var toAnimate = [];
+      var scaleMax = isDryWindow ? 1.0 : max;
 
       for(var k=0; k<SLOTS; k++){
         var val = Number(slice[k] || 0);
 
-        var targetH = Math.max(10, Math.round((val / scaleMax) * 120));
-        targetH = Math.min(140, targetH);
+        // Height rule: 0 => almost nothing; otherwise scaled
+        var h;
+        if(val === 0){
+          h = 6;
+        } else {
+          h = Math.max(12, Math.round((val / scaleMax) * 120));
+        }
 
         var b = document.createElement("div");
         b.className = "bar";
+        b.style.height = (Math.min(140, h)) + "px";
 
-        // Intensity classes
+        if(val === 0){
+          b.style.opacity = "0.35";
+        }
+
         if(val >= 3) b.classList.add("heavy");
         else if(val >= 1) b.classList.add("moderate");
 
-        // Start collapsed for animation
-        b.style.height = "0px";
-        b.style.opacity = "1";
-
+        // Hide value label for 0.0
         b.innerHTML = '<div class="bar-value">' + (val === 0 ? "" : val.toFixed(1)) + '</div>';
         bars.appendChild(b);
 
-        toAnimate.push({ el: b, h: targetH });
-        // Labels
         var idx = start + k;
         var lab = document.createElement("span");
 
@@ -1002,16 +917,37 @@ var isDryWindow = (max === 0);
       }
 
       setNowLineToFirstBar();
-
-      // ✅ Animate bars after DOM paint
-      setTimeout(function(){
-        for(var n=0; n<toAnimate.length; n++){
-          toAnimate[n].el.style.height = String(toAnimate[n].h) + "px";
-        }
-      }, 60);
     }
 
-  
+    function renderForecast(data){
+      var out = el("forecast");
+      out.innerHTML = "";
+
+      var times = data.daily.time;
+      var tmax  = data.daily.temperature_2m_max;
+      var tmin  = data.daily.temperature_2m_min;
+      var code  = data.daily.weather_code;
+      var psum  = data.daily.precipitation_sum;
+
+      for(var i=0;i<Math.min(7,times.length);i++){
+        var tile = document.createElement("div");
+        tile.className = "f-tile";
+        tile.innerHTML =
+          '<div>' +
+            '<div class="f-day">' + dayLabel(times[i]) + '</div>' +
+            '<div class="f-sub">P ' + (Number(psum[i] || 0)).toFixed(1) + ' mm</div>' +
+          '</div>' +
+          '<div class="f-ico">' + svgFor(code[i], 36) + '</div>' +
+          '<div>' +
+            '<div class="f-desc">' + weatherCodeToText(code[i]) + '</div>' +
+            '<div class="f-sub">' + ((Number(psum[i] || 0)) > 1 ? "WET PERIOD" : "LOW PRECIP") + '</div>' +
+          '</div>' +
+          '<div class="f-temps">' + Math.round(Number(tmax[i] || 0)) + '° / ' + Math.round(Number(tmin[i] || 0)) + '°</div>';
+
+        out.appendChild(tile);
+      }
+    }
+
     function loadWeather(){
       var lat = LOCATION.lat, lon = LOCATION.lon, tz = LOCATION.tz, label = LOCATION.label;
       el("placeLabel").textContent = label;
@@ -1058,10 +994,6 @@ var isDryWindow = (max === 0);
           renderForecast(data);
 
           el("status").textContent = "ONLINE";
-
-          // ✅ reset countdown after successful refresh
-          nextRefreshAt = Date.now() + REFRESH_MS;
-          tickCountdown();
         });
     }
 
@@ -1073,14 +1005,8 @@ var isDryWindow = (max === 0);
         tickClock();
         setInterval(tickClock, 1000);
 
-        tickCountdown();
-        setInterval(tickCountdown, 1000);
-
-        // initial load
         loadWeather().catch(showFatal);
-
-        // refresh loop
-        setInterval(function(){ loadWeather().catch(function(){}); }, REFRESH_MS);
+        setInterval(function(){ loadWeather().catch(function(){}); }, 5*60*1000);
       }catch(e){
         showFatal(e);
       }
