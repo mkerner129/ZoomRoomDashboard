@@ -262,7 +262,7 @@
             <h2>Markets</h2>
             <span class="pill" id="mktMeta">TradingView</span>
           </div>
-          <div class="tvNote">If a symbol shows “only available on TradingView”, swap to a TVC:* symbol.</div>
+          <div class="tvNote">Using OANDA CFD symbols for embed compatibility.</div>
           <div class="tvWrap">
             <div id="tv_widget"></div>
           </div>
@@ -322,7 +322,7 @@
     const REFRESH_MS = 4 * 60 * 1000;
     let nextRefreshAt = Date.now() + REFRESH_MS;
 
-    // Paste your RSS2JSON key here
+    // Paste your RSS2JSON key here (optional but recommended)
     const RSS2JSON_API_KEY = "";
 
     const FEEDS = {
@@ -504,7 +504,7 @@
     }
 
     // ==========================
-    // MARKETS (TradingView) - fixed symbols
+    // MARKETS (TradingView) - OANDA CFD symbols
     // ==========================
     function initTradingView(){
       const mount = $("tv_widget");
@@ -512,9 +512,9 @@
 
       const payload = {
         "symbols": [
-          ["S&P 500","TVC:SPX|1D"],
-          ["Dow Jones","TVC:DJI|1D"],
-          ["Nasdaq 100","NASDAQ:NDX|1D"],
+          ["S&P 500 (CFD)","OANDA:SPX500USD|1D"],
+          ["US 30 (CFD)","OANDA:US30USD|1D"],
+          ["Nasdaq 100 (CFD)","OANDA:NAS100USD|1D"],
           ["TSX","TSX:TSX|1D"]
         ],
         "chartOnly": false,
@@ -596,7 +596,7 @@
       tickerParts.push("WORLD: " + (world[0]?.title || "—"));
       tickerParts.push("LOCAL: " + (local[0]?.title || "—"));
       tickerParts.push("WEATHER: " + ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°");
-      tickerParts.push("MARKETS: SPX • DJI • NDX • TSX");
+      tickerParts.push("MARKETS: SPX500 • US30 • NAS100 • TSX");
       setTicker(tickerParts);
 
       const took = Math.max(1, Math.round((Date.now() - started)/1000));
