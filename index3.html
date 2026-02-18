@@ -262,7 +262,7 @@
       position:relative;
     }
 
-    /* CHANGE 1: remove NOW line */
+    /* Hide now line (keeps markup intact) */
     #nowLine{ display:none !important; }
 
     .now-line{
@@ -550,6 +550,14 @@
 
   <script>
     // ====== CONFIG ======
+    // OPTION 1 (default): Use the device's timezone automatically.
+    // This works great if the display is physically located where you want the forecast.
+    var AUTO_TZ_FROM_DEVICE = true;
+
+    // OPTION 2 (optional): If you want to derive timezone from the lat/lon (even if the device is elsewhere),
+    // you must use a timezone lookup API. See getTimezoneFromCoords() below.
+    var AUTO_TZ_FROM_COORDS = false;  // set true if you wire a real TZ lookup API
+
     var LOCATION = { lat: 33.8366, lon: -117.9143, tz: "America/Los_Angeles", label: "Anaheim, California" };
     var SLOTS = 12;
     var REFRESH_MS = 5 * 60 * 1000;
@@ -611,6 +619,27 @@
       var line = document.getElementById("nowLine");
       if(!line) return;
       line.style.left = "calc(10px + (100% - 20px) / var(--slots) * 0.5)";
+    }
+
+    // If AUTO_TZ_FROM_DEVICE is true, we'll set LOCATION.tz to the device's IANA timezone.
+    function getDeviceTimezone(){
+      try{
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+      }catch(e){
+        return null;
+      }
+    }
+
+    // OPTIONAL: timezone from coordinates requires an external timezone API.
+    // You can implement this if you want the weather timezone to follow the chosen lat/lon
+    // even when the display/device is in a different timezone.
+    function getTimezoneFromCoords(lat, lon){
+      // Placeholder: return a Promise that resolves to an IANA timezone string.
+      // Example APIs you could use (you'd need to add your own key/provider):
+      // - Google Time Zone API
+      // - TimezoneDB
+      // - GeoNames
+      return Promise.resolve(null);
     }
 
     function svgFor(code, size){
@@ -862,7 +891,6 @@
 
       if(!series){
         banner.textContent = "PRECIP DATA NOT AVAILABLE";
-        // CHANGE 1: keep NOW line hidden even when data missing
         if(nowLine) nowLine.style.display = "none";
         return;
       }
@@ -895,9 +923,6 @@
         var rawVal = Number(slice[k] || 0);
         var isTrace = rawVal < DRY_THRESHOLD_MM;
 
-        // Height rules:
-        // trace -> tiny (2px)
-        // real  -> scaled 10..140px
         var targetH;
         if(isTrace){
           targetH = TRACE_HEIGHT_PX;
@@ -925,25 +950,18 @@
 
         var idx = start + k;
         var lab = document.createElement("span");
-
         if(idx < times.length){
           var tt = new Date(times[idx]);
-
-          // CHANGE 2: 12-hour time labels like "7:00am" (every other label)
           var hr = tt.getHours();
           var ampm = hr >= 12 ? "pm" : "am";
-          hr = hr % 12;
-          if(hr === 0) hr = 12;
-
+          hr = hr % 12; if(hr === 0) hr = 12;
           lab.textContent = (k % 2 === 0) ? (hr + ":00" + ampm) : "";
         } else {
           lab.textContent = (k % 2 === 0) ? "--" : "";
         }
-
         labels.appendChild(lab);
       }
 
-      // CHANGE 1: ensure NOW line is hidden
       if(nowLine) nowLine.style.display = "none";
 
       setTimeout(function(){
@@ -1029,6 +1047,25 @@
         });
     }
 
+    // Initialize timezone automatically before first fetch
+    function initTimezone(){
+      if(AUTO_TZ_FROM_DEVICE){
+        var devTz = getDeviceTimezone();
+        if(devTz){
+          LOCATION.tz = devTz;
+        }
+        return Promise.resolve();
+      }
+
+      if(AUTO_TZ_FROM_COORDS){
+        return getTimezoneFromCoords(LOCATION.lat, LOCATION.lon).then(function(tz){
+          if(tz) LOCATION.tz = tz;
+        });
+      }
+
+      return Promise.resolve();
+    }
+
     function start(){
       try{
         document.documentElement.style.setProperty('--slots', String(SLOTS));
@@ -1040,7 +1077,12 @@
         tickCountdown();
         setInterval(tickCountdown, 1000);
 
-        loadWeather().catch(showFatal);
+        initTimezone()
+          .then(function(){
+            return loadWeather();
+          })
+          .catch(showFatal);
+
         setInterval(function(){ loadWeather().catch(function(){}); }, REFRESH_MS);
       }catch(e){
         showFatal(e);
