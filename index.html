@@ -39,7 +39,6 @@
       overflow:hidden;
     }
 
-    /* subtle animated sheen */
     .sheen{
       position:absolute; inset:-60% -60%;
       background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.08) 45%, transparent 55%);
@@ -148,14 +147,6 @@
       min-height:0;
     }
 
-    /* ===== Video ===== */
-    .videoCard .card-inner{
-      display:grid;
-      grid-template-rows:auto 1fr;
-      gap:12px;
-      height:100%;
-    }
-
     .cardHead{
       display:flex;
       justify-content:space-between;
@@ -201,6 +192,13 @@
       font-weight:1000;
     }
 
+    /* Video */
+    .videoCard .card-inner{
+      display:grid;
+      grid-template-rows:auto 1fr;
+      gap:12px;
+      height:100%;
+    }
     .videoWrap{
       border-radius: 22px;
       border:1px solid rgba(255,255,255,.16);
@@ -217,25 +215,15 @@
       display:block;
       background:#000;
     }
-    .videoOverlay{
-      position:absolute; inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      padding:18px;
+    .hint{
       color:var(--muted);
+      font-size:11px;
       font-weight:900;
       letter-spacing:.5px;
       text-transform:uppercase;
-      background: radial-gradient(700px 400px at 50% 30%, rgba(255,255,255,.10), transparent 60%);
-      pointer-events:none;
-      opacity:0;
-      transition: opacity .2s ease;
     }
-    .videoWrap.is-fallback .videoOverlay{ opacity:1; }
 
-    /* ===== Headlines lists ===== */
+    /* Headlines */
     .newsCard .card-inner{
       display:flex;
       flex-direction:column;
@@ -325,9 +313,20 @@
       text-transform:uppercase;
     }
     .item a{ color:inherit; text-decoration:none; }
-    .item a:focus{ outline:2px solid rgba(255,255,255,.35); outline-offset:2px; border-radius:10px; }
+    .empty{
+      margin-top:6px;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px dashed rgba(255,255,255,.18);
+      color:var(--muted);
+      background: rgba(0,0,0,.12);
+      font-weight:900;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      font-size:12px;
+    }
 
-    /* ===== Bottom: Markets + Weather ===== */
+    /* Bottom: Markets + Weather */
     .bottom{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -341,7 +340,6 @@
       flex-direction:column;
       gap:12px;
     }
-
     .marketGrid{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -435,7 +433,7 @@
     }
     .wxRow b{ color:#fff; font-variant-numeric: tabular-nums; }
 
-    /* ===== Ticker ===== */
+    /* Ticker */
     .ticker{
       position:absolute;
       left:0; right:0; bottom:0;
@@ -452,7 +450,7 @@
       align-items:center;
       gap:48px;
       padding-left:100%;
-      animation: scroll 40s linear infinite;
+      animation: scroll 42s linear infinite;
       white-space:nowrap;
       font-weight:1000;
       letter-spacing:.7px;
@@ -467,19 +465,16 @@
     .tickSep{ opacity:.35; }
     .tickMuted{ color:var(--muted); font-weight:900; }
 
-    /* Responsive fallback */
     @media (max-width: 1200px){
       body{overflow:auto}
-      main{
-        grid-template-columns:1fr;
-        height:auto;
-      }
-      .left{grid-template-rows: 360px 520px;}
-      .bottom{grid-template-columns:1fr; height:auto; min-height:0;}
-      .ticker{position:sticky}
+      main{ grid-template-columns:1fr; height:auto; }
+      .left{ grid-template-rows: 360px 520px; }
+      .bottom{ grid-template-columns:1fr; height:auto; min-height:0; }
+      .ticker{ position:sticky; }
     }
   </style>
 </head>
+
 <body>
   <div class="sheen"></div>
 
@@ -487,8 +482,8 @@
     <div>
       <div class="title">News Board</div>
       <div class="subline">
-        <span class="pill" id="place">Bedford, Nova Scotia</span>
-        <span class="pill" id="updated">Updating…</span>
+        <span class="pill" id="place">—</span>
+        <span class="pill" id="updated">—</span>
         <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
       </div>
     </div>
@@ -500,7 +495,6 @@
   </header>
 
   <main>
-    <!-- LEFT: video + world headlines -->
     <section class="left">
       <div class="card videoCard">
         <div class="card-inner">
@@ -510,16 +504,13 @@
               <select class="select" id="videoPick" aria-label="Select live channel"></select>
             </div>
           </div>
-          <div class="videoWrap" id="videoWrap">
+          <div class="hint">If video is blocked, headlines still update.</div>
+          <div class="videoWrap">
             <iframe id="videoFrame"
               title="News video"
               allow="autoplay; encrypted-media; picture-in-picture"
               referrerpolicy="strict-origin-when-cross-origin"
               allowfullscreen></iframe>
-            <div class="videoOverlay">
-              Video blocked or unavailable in this environment.<br>
-              Headlines and ticker will still update.
-            </div>
           </div>
         </div>
       </div>
@@ -528,7 +519,7 @@
         <div class="card-inner">
           <div class="cardHead">
             <h2>Headlines</h2>
-            <span class="pill">Top stories • auto refresh</span>
+            <span class="pill">GDELT • JSON • fast refresh</span>
           </div>
 
           <div class="newsCols">
@@ -538,27 +529,28 @@
                 <span class="badge" id="worldMeta">—</span>
               </h3>
               <ul class="list" id="worldList"></ul>
+              <div class="empty" id="worldEmpty" style="display:none;"></div>
             </div>
 
             <div class="panel">
               <h3>
-                Local (Atlantic)
+                Local (Nova Scotia)
                 <span class="badge" id="localMeta">—</span>
               </h3>
               <ul class="list" id="localList"></ul>
+              <div class="empty" id="localEmpty" style="display:none;"></div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- RIGHT: local headlines panel + bottom row -->
     <section class="right">
       <div class="card newsCard">
         <div class="card-inner">
           <div class="cardHead">
             <h2>More Local</h2>
-            <span class="pill">CBC NS • Global Halifax • CTV Atlantic</span>
+            <span class="pill">Halifax • Bedford • Atlantic</span>
           </div>
 
           <div class="newsCols" style="grid-template-columns:1fr;">
@@ -568,6 +560,7 @@
                 <span class="badge" id="mixMeta">—</span>
               </h3>
               <ul class="list" id="mixList"></ul>
+              <div class="empty" id="mixEmpty" style="display:none;"></div>
             </div>
           </div>
         </div>
@@ -615,45 +608,21 @@
   </div>
 
   <script>
-    /* ============================================================
-       CONFIG (edit these safely)
-       ============================================================ */
-
-    // Bedford, NS (approx). You can change lat/lon anytime.
+    // ==========================
+    // CONFIG
+    // ==========================
     const LOCATION = { lat: 44.7326, lon: -63.6533, label: "Bedford, Nova Scotia" };
-
-    // Refresh cadence
-    const REFRESH_MS = 4 * 60 * 1000; // 4 min
+    const REFRESH_MS = 4 * 60 * 1000;
     let nextRefreshAt = Date.now() + REFRESH_MS;
 
-    // RSS proxy: uses AllOrigins "raw" to avoid common CORS failures.
-    // If this ever fails in your signage environment, we can swap to another proxy.
-    const RSS_PROXY = (url) => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
-
-    // Feeds (reputable defaults; easy to swap)
-    const FEEDS = {
-      world: [
-        { name:"BBC World", url:"https://feeds.bbci.co.uk/news/world/rss.xml" },
-        { name:"BBC Top",   url:"https://feeds.bbci.co.uk/news/rss.xml" }
-      ],
-      local: [
-        { name:"CBC Nova Scotia", url:"https://rss.cbc.ca/lineup/canada-novascotia.xml" },
-        { name:"Global Halifax",  url:"https://globalnews.ca/halifax/feed/" },
-        { name:"CTV Atlantic",    url:"https://atlantic.ctvnews.ca/rss/ctv-news-atlantic-public-rss-1.822315" }
-      ]
-    };
-
-    // Video options (YouTube live embeds). Some signage setups block embeds; headlines still work.
-    // You can add/remove as you like.
+    // Video options (YouTube live embeds). Some environments block embeds.
     const VIDEO_CHOICES = [
-      { name:"DW News (Live)",     embed:"https://www.youtube.com/embed/Nu9l2qDkOh4?autoplay=1&mute=1&controls=1&rel=0" },
-      { name:"Sky News (Live)",    embed:"https://www.youtube.com/embed/9Auq9mYxFEE?autoplay=1&mute=1&controls=1&rel=0" },
-      { name:"NBC News NOW",       embed:"https://www.youtube.com/embed/6ZjpG2kO3vY?autoplay=1&mute=1&controls=1&rel=0" },
-      { name:"CBC News (Search)",  embed:"https://www.youtube.com/embed?autoplay=0&mute=1&controls=1&rel=0" }
+      { name:"DW News (Live)",  embed:"https://www.youtube.com/embed/Nu9l2qDkOh4?autoplay=1&mute=1&controls=1&rel=0" },
+      { name:"Sky News (Live)", embed:"https://www.youtube.com/embed/9Auq9mYxFEE?autoplay=1&mute=1&controls=1&rel=0" },
+      { name:"NBC News NOW",    embed:"https://www.youtube.com/embed/6ZjpG2kO3vY?autoplay=1&mute=1&controls=1&rel=0" }
     ];
 
-    // Markets via Stooq (free endpoints). We fetch through the same proxy to reduce CORS issues.
-    // Note: Stooq symbols: ^spx, ^dji, ^ndq, ^tse (TSX index), etc.
+    // Markets (Stooq CSV). If this fails due to CORS, you'll see "DATA UNAVAILABLE".
     const MARKETS = [
       { label:"S&P 500", sym:"^spx" },
       { label:"Dow",     sym:"^dji" },
@@ -661,15 +630,10 @@
       { label:"TSX",     sym:"^tse" }
     ];
 
-    /* ============================================================
-       HELPERS
-       ============================================================ */
-
+    // ==========================
+    // HELPERS
+    // ==========================
     const $ = (id) => document.getElementById(id);
-
-    function safeText(s){
-      return String(s ?? "").replace(/\s+/g," ").trim();
-    }
 
     function fmtTime12(d){
       let h = d.getHours();
@@ -678,13 +642,31 @@
       h = h % 12; if(h === 0) h = 12;
       return h + ":" + m + ap;
     }
-
     function fmtDateLine(d){
       return d.toLocaleDateString([], { weekday:"long", month:"short", day:"numeric" }).toUpperCase();
     }
-
+    function tickClock(){
+      const d = new Date();
+      $("clock").childNodes[0].textContent = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + "\n      ";
+      $("clockDate").textContent = fmtDateLine(d);
+    }
+    function tickCountdown(){
+      const left = Math.max(0, nextRefreshAt - Date.now());
+      const s = Math.floor(left/1000);
+      const m = Math.floor(s/60);
+      const r = s % 60;
+      $("refreshIn").textContent = String(m).padStart(2,"0") + ":" + String(r).padStart(2,"0");
+    }
+    function escapeHtml(str){
+      return String(str ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+    }
     function timeAgo(iso){
-      const t = new Date(iso).getTime();
+      const t = Date.parse(iso || "");
       if(!isFinite(t)) return "";
       const s = Math.max(0, Math.floor((Date.now() - t)/1000));
       if(s < 60) return s + "s ago";
@@ -696,98 +678,60 @@
       return d + "d ago";
     }
 
-    function tickClock(){
-      const d = new Date();
-      $("clock").childNodes[0].textContent = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + "\n      ";
-      $("clockDate").textContent = fmtDateLine(d);
+    async function fetchJson(url){
+      const res = await fetch(url, { cache:"no-store" });
+      if(!res.ok) throw new Error("Fetch failed " + res.status);
+      return await res.json();
     }
-
-    function tickCountdown(){
-      const left = Math.max(0, nextRefreshAt - Date.now());
-      const s = Math.floor(left/1000);
-      const m = Math.floor(s/60);
-      const r = s % 60;
-      $("refreshIn").textContent = String(m).padStart(2,"0") + ":" + String(r).padStart(2,"0");
-    }
-
     async function fetchText(url){
       const res = await fetch(url, { cache:"no-store" });
-      if(!res.ok) throw new Error("Fetch failed: " + res.status);
+      if(!res.ok) throw new Error("Fetch failed " + res.status);
       return await res.text();
     }
 
-    function parseRSS(xmlText){
-      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-      const items = Array.from(doc.querySelectorAll("item")).slice(0, 20).map(it => {
-        const title = safeText(it.querySelector("title")?.textContent);
-        const link  = safeText(it.querySelector("link")?.textContent);
-        const pub   = safeText(it.querySelector("pubDate")?.textContent || it.querySelector("dc\\:date")?.textContent);
-        return { title, link, pubDate: pub };
-      }).filter(x => x.title);
-      return items;
+    function setEmpty(which, msg){
+      const empty = $(which + "Empty");
+      const list = $(which + "List");
+      const meta = $(which + "Meta");
+
+      if(msg){
+        empty.style.display = "";
+        empty.textContent = msg;
+        meta.textContent = "NO DATA";
+        list.innerHTML = "";
+      } else {
+        empty.style.display = "none";
+      }
     }
 
-    function renderList(targetId, items, max){
-      const ul = $(targetId);
+    function renderList(listId, items, max){
+      const ul = $(listId);
       ul.innerHTML = "";
       items.slice(0, max).forEach(x => {
         const li = document.createElement("li");
         li.className = "item";
-        const when = x.pubDate ? timeAgo(x.pubDate) : "";
+        const when = x.seendate ? timeAgo(x.seendate) : "";
         li.innerHTML = `
-          <a href="${x.link || "#"}" target="_blank" rel="noopener">
-            <div class="t">${escapeHtml(x.title)}</div>
+          <a href="${x.url || "#"}" target="_blank" rel="noopener">
+            <div class="t">${escapeHtml(x.title || "—")}</div>
             <div class="m">
               <span>${escapeHtml(when || "")}</span>
-              <span>OPEN</span>
+              <span>${escapeHtml((x.domain || "").replace(/^www\./,"").toUpperCase())}</span>
             </div>
           </a>`;
         ul.appendChild(li);
       });
     }
 
-    function escapeHtml(str){
-      return String(str ?? "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-    }
-
-    function mergeAndSort(itemsBySource){
-      const all = [];
-      itemsBySource.forEach(({source, items}) => {
-        items.forEach(x => all.push({ ...x, source }));
-      });
-      // Newest first if possible
-      all.sort((a,b) => {
-        const ta = Date.parse(a.pubDate || "") || 0;
-        const tb = Date.parse(b.pubDate || "") || 0;
-        return tb - ta;
-      });
-      // de-dupe by title
-      const seen = new Set();
-      const out = [];
-      for(const x of all){
-        const key = x.title.toLowerCase();
-        if(seen.has(key)) continue;
-        seen.add(key);
-        out.push(x);
-      }
-      return out;
-    }
-
     function setTicker(parts){
       const track = $("tickerTrack");
-      // Build a long loopable string
       const html = parts.map(p => `<span>${escapeHtml(p)}</span>`).join(`<span class="tickSep"> • </span>`);
       track.innerHTML = html + `<span class="tickSep"> • </span>` + html;
     }
 
-    /* ============================================================
-       VIDEO
-       ============================================================ */
+    // ==========================
+    // VIDEO
+    // ==========================
     function initVideo(){
       const sel = $("videoPick");
       sel.innerHTML = "";
@@ -797,28 +741,55 @@
         opt.textContent = v.name;
         sel.appendChild(opt);
       });
-
       function apply(){
         const i = Number(sel.value || 0);
-        const src = VIDEO_CHOICES[i]?.embed || VIDEO_CHOICES[0].embed;
-        const iframe = $("videoFrame");
-        const wrap = $("videoWrap");
-        wrap.classList.remove("is-fallback");
-        iframe.src = src;
-
-        // If it doesn't load within a short window, show overlay (non-fatal).
-        let done = false;
-        const timer = setTimeout(() => { if(!done) wrap.classList.add("is-fallback"); }, 2500);
-        iframe.onload = () => { done = true; clearTimeout(timer); };
+        $("videoFrame").src = VIDEO_CHOICES[i]?.embed || VIDEO_CHOICES[0].embed;
       }
-
       sel.addEventListener("change", apply);
       apply();
     }
 
-    /* ============================================================
-       WEATHER (Open-Meteo)
-       ============================================================ */
+    // ==========================
+    // NEWS (GDELT DOC 2.1)
+    // ==========================
+    // GDELT endpoint pattern:
+    // https://api.gdeltproject.org/api/v2/doc/doc?query=...&mode=ArtList&format=json&maxrecords=10&sort=HybridRel
+    function gdeltUrl(query, max){
+      const q = encodeURIComponent(query);
+      return "https://api.gdeltproject.org/api/v2/doc/doc?query=" + q +
+             "&mode=ArtList&format=json&maxrecords=" + encodeURIComponent(String(max || 12)) +
+             "&sort=HybridRel";
+    }
+
+    async function loadWorld(){
+      // Broad global top stories
+      const url = gdeltUrl("world OR global OR international", 14);
+      const data = await fetchJson(url);
+      const items = (data.articles || []).map(a => ({
+        title: a.title,
+        url: a.url,
+        domain: a.domain,
+        seendate: a.seendate
+      }));
+      return items;
+    }
+
+    async function loadLocal(){
+      // Nova Scotia / Halifax / Bedford focused
+      const url = gdeltUrl('"Nova Scotia" OR Halifax OR Bedford OR "Atlantic Canada"', 18);
+      const data = await fetchJson(url);
+      const items = (data.articles || []).map(a => ({
+        title: a.title,
+        url: a.url,
+        domain: a.domain,
+        seendate: a.seendate
+      }));
+      return items;
+    }
+
+    // ==========================
+    // WEATHER (Open-Meteo)
+    // ==========================
     function wxText(code){
       const wc = Number(code);
       const map = {
@@ -836,16 +807,13 @@
       const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
       return dirs[Math.round(deg/22.5)%16];
     }
-
     async function loadWeather(){
       const url =
         "https://api.open-meteo.com/v1/forecast?latitude=" + LOCATION.lat + "&longitude=" + LOCATION.lon +
         "&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code,cloud_cover" +
         "&timezone=auto";
 
-      const res = await fetch(url, { cache:"no-store" });
-      if(!res.ok) throw new Error("Weather fetch failed");
-      const data = await res.json();
+      const data = await fetchJson(url);
       const c = data.current;
 
       $("wxTemp").textContent  = Math.round(Number(c.temperature_2m || 0));
@@ -856,40 +824,40 @@
       $("wxWind").textContent  = Math.round(Number(c.wind_speed_10m || 0));
       $("wxDir").textContent   = windDirText(c.wind_direction_10m);
       $("wxDesc").textContent  = wxText(c.weather_code);
-
       $("wxMeta").textContent  = "UPDATED " + fmtTime12(new Date(c.time));
     }
 
-    /* ============================================================
-       MARKETS (Stooq via proxy)
-       ============================================================ */
+    // ==========================
+    // MARKETS (Stooq CSV)
+    // ==========================
     async function loadMarkets(){
-      // Stooq CSV endpoint: https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv
       const grid = $("marketGrid");
       grid.innerHTML = "";
       $("mktMeta").textContent = "UPDATING…";
 
-      const parts = [];
+      const tickerParts = [];
       for(const m of MARKETS){
         try{
-          const url = RSS_PROXY("https://stooq.com/q/l/?s=" + encodeURIComponent(m.sym) + "&f=sd2t2ohlcv&h&e=csv");
+          const url = "https://stooq.com/q/l/?s=" + encodeURIComponent(m.sym) + "&f=sd2t2ohlcv&h&e=csv";
           const txt = await fetchText(url);
-          // header: Symbol,Date,Time,Open,High,Low,Close,Volume
           const lines = txt.trim().split(/\r?\n/);
           const row = (lines[1] || "").split(",");
+
+          // Symbol,Date,Time,Open,High,Low,Close,Volume
           const close = Number(row[6]);
           const open  = Number(row[3]);
+          const t = row[2] ? row[2].slice(0,5) : "";
+
           const chg = (isFinite(close) && isFinite(open)) ? (close - open) : NaN;
           const pct = (isFinite(chg) && open) ? (chg / open * 100) : NaN;
 
           const cls = !isFinite(chg) ? "flat" : (chg > 0 ? "up" : (chg < 0 ? "dn" : "flat"));
           const chgText = !isFinite(chg) ? "—" : ((chg > 0 ? "+" : "") + chg.toFixed(2) + " (" + (pct>0?"+":"") + pct.toFixed(2) + "%)");
-          const time = row[2] ? row[2].slice(0,5) : "";
 
           const box = document.createElement("div");
           box.className = "quote";
           box.innerHTML = `
-            <div class="qSym"><span>${escapeHtml(m.label)}</span><span class="tickMuted">${escapeHtml(time)}</span></div>
+            <div class="qSym"><span>${escapeHtml(m.label)}</span><span class="tickMuted">${escapeHtml(t)}</span></div>
             <div class="qVal">
               <div class="qPrice">${isFinite(close) ? close.toFixed(2) : "—"}</div>
               <div class="qChg ${cls}">${escapeHtml(chgText)}</div>
@@ -897,7 +865,7 @@
           `;
           grid.appendChild(box);
 
-          parts.push(m.label + " " + (isFinite(close)?close.toFixed(2):"—") + " " + (isFinite(pct)?((pct>0?"+":"")+pct.toFixed(2)+"%"):""));
+          tickerParts.push(m.label + " " + (isFinite(close)?close.toFixed(2):"—") + " " + (isFinite(pct)?((pct>0?"+":"")+pct.toFixed(2)+"%"):""));
         }catch(e){
           const box = document.createElement("div");
           box.className = "quote";
@@ -909,82 +877,77 @@
             </div>
           `;
           grid.appendChild(box);
-          parts.push(m.label + " —");
+          tickerParts.push(m.label + " —");
         }
       }
 
       $("mktMeta").textContent = "UPDATED";
-      return parts;
+      return tickerParts;
     }
 
-    /* ============================================================
-       NEWS (RSS)
-       ============================================================ */
-    async function loadFeedGroup(feedList){
-      const out = [];
-      for(const f of feedList){
-        try{
-          const xml = await fetchText(RSS_PROXY(f.url));
-          const items = parseRSS(xml);
-          out.push({ source: f.name, items });
-        }catch(e){
-          out.push({ source: f.name, items: [] });
-        }
-      }
-      return out;
-    }
-
-    function pickMeta(itemsBySource){
-      let count = 0;
-      for(const s of itemsBySource) count += (s.items?.length || 0);
-      return count ? (count + " items") : "no data";
-    }
-
-    /* ============================================================
-       MAIN REFRESH
-       ============================================================ */
+    // ==========================
+    // MAIN REFRESH
+    // ==========================
     async function refreshAll(){
       const started = Date.now();
-      $("updated").textContent = "UPDATING…";
       $("place").textContent = LOCATION.label;
+      $("updated").textContent = "UPDATING…";
 
-      // NEWS
-      const [worldSrc, localSrc] = await Promise.all([
-        loadFeedGroup(FEEDS.world),
-        loadFeedGroup(FEEDS.local)
-      ]);
+      // News
+      let world = [];
+      let local = [];
+      try{
+        [world, local] = await Promise.all([loadWorld(), loadLocal()]);
+      }catch(e){
+        // If GDELT blocked, show message
+      }
 
-      $("worldMeta").textContent = pickMeta(worldSrc);
-      $("localMeta").textContent = pickMeta(localSrc);
+      if(!world.length){
+        setEmpty("world", "WORLD HEADLINES UNAVAILABLE (NETWORK/CORS)");
+      } else {
+        setEmpty("world", "");
+        $("worldMeta").textContent = world.length + " items";
+        renderList("worldList", world, 10);
+      }
 
-      const world = mergeAndSort(worldSrc);
-      const local = mergeAndSort(localSrc);
+      if(!local.length){
+        setEmpty("local", "LOCAL HEADLINES UNAVAILABLE (NETWORK/CORS)");
+      } else {
+        setEmpty("local", "");
+        $("localMeta").textContent = local.length + " items";
+        renderList("localList", local, 10);
+      }
 
-      renderList("worldList", world, 10);
-      renderList("localList", local, 10);
+      // Mix = more local
+      if(!local.length){
+        const mixEmpty = $("mixEmpty");
+        mixEmpty.style.display = "";
+        mixEmpty.textContent = "LOCAL MIX UNAVAILABLE";
+        $("mixMeta").textContent = "NO DATA";
+        $("mixList").innerHTML = "";
+      } else {
+        $("mixEmpty").style.display = "none";
+        $("mixMeta").textContent = Math.min(18, local.length) + " items";
+        renderList("mixList", local, 18);
+      }
 
-      // Mix local (more items)
-      const mix = mergeAndSort(localSrc).slice(0, 18);
-      $("mixMeta").textContent = mix.length ? (mix.length + " items") : "no data";
-      renderList("mixList", mix, 18);
-
-      // MARKETS + WEATHER
+      // Markets + Weather
       const [mktParts] = await Promise.all([
         loadMarkets(),
         loadWeather().catch(()=>{})
       ]);
 
-      // Ticker: top world + top local + markets + weather
+      // Ticker
       const tickerParts = [];
       tickerParts.push("WORLD: " + (world[0]?.title || "—"));
       tickerParts.push("LOCAL: " + (local[0]?.title || "—"));
       (mktParts || []).forEach(p => tickerParts.push("MKT: " + p));
-      tickerParts.push("WEATHER: " + $("wxDesc").textContent + " " + $("wxTemp").textContent + "°");
-
+      tickerParts.push("WEATHER: " + ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°");
       setTicker(tickerParts);
 
       const took = Math.max(1, Math.round((Date.now() - started)/1000));
       $("updated").textContent = "UPDATED " + fmtTime12(new Date()) + " • " + took + "s";
+
       nextRefreshAt = Date.now() + REFRESH_MS;
       tickCountdown();
     }
@@ -998,18 +961,11 @@
       tickCountdown();
       setInterval(tickCountdown, 1000);
 
-      refreshAll().catch(() => { $("updated").textContent = "UPDATE FAILED"; });
-      setInterval(() => { refreshAll().catch(()=>{}); }, REFRESH_MS);
+      refreshAll().catch(()=>{ $("updated").textContent = "UPDATE FAILED"; });
+      setInterval(()=>{ refreshAll().catch(()=>{}); }, REFRESH_MS);
     }
 
     document.addEventListener("DOMContentLoaded", start);
   </script>
-
-  <!-- Notes (for you):
-       - Video embeds are the most likely thing to be blocked in Zoom Digital Signage.
-         If it's blocked, you'll see the "Video blocked" overlay, but the rest still runs.
-       - RSS is fetched through api.allorigins.win to reduce CORS problems.
-         If your signage blocks that domain, we can swap to a different proxy or use a hosted feed normalizer.
-  -->
 </body>
 </html>
