@@ -3,16 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>News Board (World • Local • Markets • Weather)</title>
+  <title>Broadcast News Board</title>
   <style>
     :root{
       --bg1:#061a3a; --bg2:#0a2a5f; --bg3:#081833;
       --text:#eaf2ff; --muted:#b9d1ff; --border: rgba(255,255,255,.14);
       --shadow: 0 18px 44px rgba(0,0,0,.45);
       --shadow2: 0 10px 22px rgba(0,0,0,.35);
-      --radius: 26px; --gap: 16px; --tickerH: 56px;
+      --radius: 26px; --gap: 16px;
+      --tickerH: 64px;
+      --breakingH: 56px;
       --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
+
+      --accent1: rgba(54,194,255,.95);
+      --accent2: rgba(124,77,255,.92);
+      --warn1: rgba(255,64,64,.95);
+      --warn2: rgba(255,176,32,.95);
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -24,9 +32,13 @@
         linear-gradient(180deg, var(--bg1), var(--bg2) 50%, var(--bg3));
       overflow:hidden;
     }
+
     .sheen{
       position:absolute; inset:-60% -60%;
-      background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.08) 45%, transparent 55%);
+      background: linear-gradient(120deg,
+        transparent 35%,
+        rgba(255,255,255,.08) 45%,
+        transparent 55%);
       transform: rotate(8deg);
       animation: sweep 14s linear infinite;
       pointer-events:none;
@@ -38,43 +50,101 @@
       100%{transform: translateX(22%) rotate(8deg)}
     }
 
+    /* ====== TOP BAR ====== */
     header{
-      position:relative; z-index:2;
+      position:relative; z-index:3;
       padding:18px 22px 10px;
       display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:end;
     }
+    .brand{
+      display:flex; flex-direction:column; gap:10px;
+    }
     .title{
-      font-weight:1000; letter-spacing:-.6px; font-size:30px; line-height:1;
-      text-transform:uppercase; text-shadow: 0 10px 22px rgba(0,0,0,.35);
+      font-weight:1100; letter-spacing:-.8px; font-size:32px; line-height:1;
+      text-transform:uppercase;
+      text-shadow: 0 10px 22px rgba(0,0,0,.35);
     }
     .subline{
-      margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-      color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:850; font-size:12px;
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      color:var(--muted); text-transform:uppercase; letter-spacing:.6px;
+      font-weight:900; font-size:12px;
     }
     .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding:7px 12px; border:1px solid var(--border);
       border-radius:999px; background: rgba(255,255,255,.08);
       backdrop-filter: blur(10px);
-      font-size:12px; color:var(--muted); font-weight:850;
+      font-size:12px; color:var(--muted); font-weight:900;
       letter-spacing:.4px; text-transform:uppercase; white-space:nowrap;
     }
     .clock{
       text-align:right; font-variant-numeric: tabular-nums;
-      font-weight:1000; letter-spacing:-.2px; font-size:24px; text-transform:uppercase;
+      font-weight:1100; letter-spacing:-.2px; font-size:26px;
+      text-transform:uppercase;
     }
     .clock small{
       display:block; margin-top:6px; color:var(--muted);
-      font-size:12px; font-weight:850; letter-spacing:.7px;
+      font-size:12px; font-weight:900; letter-spacing:.7px;
     }
 
+    /* ====== BREAKING BAR ====== */
+    .breaking{
+      position:absolute; left:0; right:0;
+      top:86px; /* just below header */
+      height: var(--breakingH);
+      z-index:4;
+      display:none;
+      align-items:center;
+      border-top:1px solid rgba(255,255,255,.12);
+      border-bottom:1px solid rgba(255,255,255,.12);
+      background:
+        linear-gradient(90deg, rgba(255,64,64,.85), rgba(255,176,32,.55) 60%, rgba(255,64,64,.78));
+      box-shadow: 0 14px 30px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .breaking.on{display:flex}
+    .breakingTag{
+      min-width: 182px;
+      height:100%;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:1100;
+      letter-spacing:1.3px;
+      text-transform:uppercase;
+      background: rgba(0,0,0,.22);
+      border-right:1px solid rgba(255,255,255,.18);
+    }
+    .breakingTrack{
+      height:100%;
+      display:flex; align-items:center;
+      white-space:nowrap;
+      padding-left:100%;
+      animation: scroll 22s linear infinite;
+      font-weight:1050;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      font-size:16px;
+      color:#fff;
+      text-shadow: 0 10px 18px rgba(0,0,0,.35);
+      gap:48px;
+    }
+    .breakingSep{opacity:.45}
+    @keyframes scroll{ 0%{transform:translateX(0)} 100%{transform:translateX(-100%)} }
+
+    /* ====== MAIN LAYOUT ====== */
     main{
       position:relative; z-index:2;
       padding:0 22px 16px;
       height: calc(100% - 86px - var(--tickerH));
-      display:grid; grid-template-columns: 1.35fr .95fr;
-      gap: var(--gap); min-height:0;
+      display:grid;
+      grid-template-columns: 1.55fr .95fr;
+      gap: var(--gap);
+      min-height:0;
+      margin-top: calc(var(--breakingH) + 10px); /* room for breaking bar even when hidden */
     }
+    .breaking:not(.on) ~ main{
+      margin-top: 0;
+    }
+
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
       border:1px solid var(--border);
@@ -84,44 +154,196 @@
       backdrop-filter: blur(12px);
       min-height:0;
     }
-    .card-inner{ padding:16px; min-height:0; }
+    .card-inner{ padding:16px; min-height:0; height:100%; }
 
-    .left{ display:grid; grid-template-rows: 1fr 1fr; gap: var(--gap); height:100%; min-height:0; }
-    .right{ display:grid; grid-template-rows: 1fr auto; gap: var(--gap); height:100%; min-height:0; }
+    /* Left column: Hero + lists */
+    .leftCol{
+      display:grid;
+      grid-template-rows: 1.05fr .95fr;
+      gap: var(--gap);
+      height:100%;
+      min-height:0;
+    }
 
-    .cardHead{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
-    .cardHead h2{ margin:0; font-size:14px; font-weight:1000; letter-spacing:.8px; text-transform:uppercase; color:#fff; }
+    /* Hero panel */
+    .hero{
+      position:relative;
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.16);
+      background:
+        radial-gradient(900px 500px at 20% 20%, rgba(54,194,255,.18), transparent 55%),
+        radial-gradient(700px 500px at 80% 30%, rgba(124,77,255,.14), transparent 55%),
+        rgba(0,0,0,.16);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:12px;
+      height:100%;
+      min-height:0;
+    }
+    .heroMedia{
+      position:relative;
+      border-right:1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      min-height:0;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.14), transparent 60%),
+        linear-gradient(135deg, rgba(54,194,255,.35), rgba(124,77,255,.25));
+    }
+    .heroImg{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+      opacity:.88;
+      transform: scale(1.03);
+      filter: contrast(1.05) saturate(1.05);
+    }
+    .heroOverlay{
+      position:absolute; inset:0;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,.10) 55%, rgba(0,0,0,.35)),
+        linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.65));
+    }
+    .heroBug{
+      position:absolute; top:14px; left:14px;
+      display:inline-flex; align-items:center; gap:10px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+      font-size:12px; font-weight:1000; letter-spacing:.7px; text-transform:uppercase;
+      color:#fff;
+      box-shadow: 0 10px 20px rgba(0,0,0,.25);
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      box-shadow: 0 0 14px rgba(54,194,255,.35);
+    }
+    .heroText{
+      padding:16px 16px 14px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:10px;
+      min-height:0;
+    }
+    .heroTitle{
+      font-weight:1100;
+      font-size:34px;
+      letter-spacing:-.7px;
+      line-height:1.07;
+      text-transform:none;
+      text-shadow: 0 14px 26px rgba(0,0,0,.35);
+      overflow:hidden;
+      display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;
+    }
+    .heroDeck{
+      margin-top:10px;
+      color:rgba(234,242,255,.92);
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.25px;
+      line-height:1.3;
+      overflow:hidden;
+      display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+      opacity:.95;
+    }
+    .heroMeta{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:1000;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .heroMeta a{color:inherit; text-decoration:none}
+    .heroKicker{
+      display:flex; gap:8px; align-items:center;
+    }
+    .badge{
+      display:inline-flex; align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      font-weight:1000;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+      font-size:11px;
+      color:#fff;
+      white-space:nowrap;
+    }
+    .badge.breaking{
+      background: linear-gradient(135deg, rgba(255,64,64,.92), rgba(255,176,32,.75));
+      border-color: rgba(255,255,255,.18);
+      box-shadow: 0 0 22px rgba(255,64,64,.22);
+    }
 
+    /* Lists row */
+    .lists{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap);
+      height:100%;
+      min-height:0;
+    }
+    .cardHead{
+      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .cardHead h2{
+      margin:0; font-size:14px; font-weight:1100;
+      letter-spacing:.9px; text-transform:uppercase; color:#fff;
+    }
     .panel{
-      border-radius:22px; border:1px solid rgba(255,255,255,.16);
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.16);
       background: rgba(0,0,0,.14);
       box-shadow: var(--shadow2);
       padding:12px;
       display:flex;
       flex-direction:column;
       min-height:0;
-      height: calc(100% - 40px);
+      height: calc(100% - 36px);
     }
-
-    .list{
+    ul.list{
       list-style:none; margin:0; padding:0;
       display:flex; flex-direction:column; gap:10px;
       overflow:auto; min-height:0;
     }
     .item{
-      border-radius:16px; border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
       background: rgba(0,0,0,.16);
       padding:10px 10px;
       box-shadow: 0 10px 18px rgba(0,0,0,.22);
     }
     .item .t{
-      font-weight:1000; font-size:13px; letter-spacing:.2px; color:#fff; line-height:1.25;
+      font-weight:1050;
+      font-size:13px;
+      letter-spacing:.2px;
+      color:#fff;
+      line-height:1.25;
       overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-      text-transform:none;
     }
     .item .m{
-      margin-top:6px; display:flex; justify-content:space-between; gap:10px;
-      color:var(--muted); font-size:11px; font-weight:900; letter-spacing:.4px; text-transform:uppercase;
+      margin-top:6px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--muted);
+      font-size:11px;
+      font-weight:950;
+      letter-spacing:.5px;
+      text-transform:uppercase;
     }
     .item a{ color:inherit; text-decoration:none; }
     .empty{
@@ -131,7 +353,7 @@
       background: rgba(0,0,0,.10);
       padding:10px 12px;
       color:var(--muted);
-      font-weight:900;
+      font-weight:950;
       letter-spacing:.5px;
       text-transform:uppercase;
       font-size:12px;
@@ -139,71 +361,108 @@
       white-space:pre-wrap;
     }
 
-    .bottom{
-      display:grid; grid-template-columns: 1fr 1fr; gap: var(--gap);
-      height: 260px; min-height:260px;
+    /* Right column: markets + weather + top local */
+    .rightCol{
+      display:grid;
+      grid-template-rows: 1fr auto;
+      gap: var(--gap);
+      height:100%;
+      min-height:0;
     }
-    .miniCard .card-inner{ height:100%; display:flex; flex-direction:column; gap:12px; }
+    .stack{
+      display:grid;
+      grid-template-rows: 1.1fr .9fr;
+      gap: var(--gap);
+      min-height:0;
+    }
 
+    .tvNote{
+      color:var(--muted);
+      font-size:11px;
+      font-weight:950;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      margin-bottom:10px;
+    }
     .tvWrap{
       border-radius:22px;
       border:1px solid rgba(255,255,255,.16);
       background: rgba(0,0,0,.14);
       box-shadow: var(--shadow2);
       overflow:hidden;
-      flex: 1 1 auto;
-      min-height: 0;
-      position:relative;
+      min-height:0;
+      height: calc(100% - 46px);
     }
     .tvWrap > div{ height:100%; }
-    .tvNote{
-      color:var(--muted);
-      font-size:11px;
-      font-weight:900;
-      letter-spacing:.5px;
-      text-transform:uppercase;
-    }
 
-    .wxHero{
-      border-radius:22px; border:1px solid rgba(255,255,255,.16);
-      background: rgba(0,0,0,.14);
+    .wxBox{
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.16);
+      background:
+        radial-gradient(700px 260px at 30% 10%, rgba(54,194,255,.16), transparent 60%),
+        radial-gradient(700px 260px at 70% 10%, rgba(124,77,255,.12), transparent 60%),
+        rgba(0,0,0,.14);
       box-shadow: var(--shadow2);
       padding:12px;
-      display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:center;
-      flex:1 1 auto;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      align-items:center;
+      height: calc(100% - 36px);
     }
-    .wxTemp{ font-weight:1000; font-size:52px; letter-spacing:-1px; line-height:1; }
-    .wxDesc{ margin-top:10px; font-weight:1000; letter-spacing:.6px; text-transform:uppercase; color:#fff; font-size:13px; }
-    .wxMeta{ display:flex; flex-direction:column; gap:8px; color:var(--muted); font-weight:900; letter-spacing:.4px; text-transform:uppercase; font-size:12px; }
+    .wxTemp{ font-weight:1150; font-size:54px; letter-spacing:-1px; line-height:1; }
+    .wxDesc{ margin-top:10px; font-weight:1100; letter-spacing:.7px; text-transform:uppercase; color:#fff; font-size:13px; }
+    .wxMeta{
+      display:flex; flex-direction:column; gap:8px;
+      color:var(--muted);
+      font-weight:950;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      font-size:12px;
+    }
     .wxRow b{ color:#fff; font-variant-numeric: tabular-nums; }
 
+    /* ====== BOTTOM TICKER ====== */
     .ticker{
       position:absolute; left:0; right:0; bottom:0;
       height: var(--tickerH);
-      z-index:3;
+      z-index:5;
       border-top:1px solid rgba(255,255,255,.14);
-      background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.28));
+      background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.30));
       backdrop-filter: blur(10px);
       overflow:hidden;
     }
+    .tickerTag{
+      position:absolute; left:0; top:0; bottom:0;
+      width:160px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:1100; letter-spacing:1.1px; text-transform:uppercase;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.12), transparent 60%),
+        linear-gradient(135deg, rgba(54,194,255,.85), rgba(124,77,255,.78));
+      border-right:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 14px 26px rgba(0,0,0,.25);
+    }
     .tickerTrack{
       height:100%;
-      display:flex; align-items:center; gap:48px;
-      padding-left:100%;
-      animation: scroll 44s linear infinite;
+      display:flex; align-items:center; gap:56px;
+      padding-left: calc(160px + 100%);
+      animation: scroll2 44s linear infinite;
       white-space:nowrap;
-      font-weight:1000; letter-spacing:.7px; text-transform:uppercase;
-      font-size:14px; color:#fff;
+      font-weight:1100; letter-spacing:.7px; text-transform:uppercase;
+      font-size:15px; color:#fff;
     }
-    @keyframes scroll{ 0%{transform:translateX(0)} 100%{transform:translateX(-100%)} }
+    .tickMuted{ color:var(--muted); font-weight:950; }
     .tickSep{ opacity:.35; }
-    .tickMuted{ color:var(--muted); font-weight:900; }
+    @keyframes scroll2{ 0%{transform:translateX(0)} 100%{transform:translateX(-100%)} }
 
     @media (max-width: 1200px){
       body{overflow:auto}
-      main{ grid-template-columns:1fr; height:auto; }
-      .bottom{ grid-template-columns:1fr; height:auto; min-height:0; }
-      .ticker{ position:sticky; }
+      .breaking{position:sticky; top:0}
+      main{grid-template-columns:1fr; height:auto}
+      .lists{grid-template-columns:1fr}
+      .stack{grid-template-rows:auto auto}
+      .ticker{position:sticky}
     }
   </style>
 </head>
@@ -212,103 +471,164 @@
   <div class="sheen"></div>
 
   <header>
-    <div>
-      <div class="title">News Board</div>
+    <div class="brand">
+      <div class="title">Broadcast News</div>
       <div class="subline">
         <span class="pill" id="place">Bedford, Nova Scotia</span>
         <span class="pill" id="updated">Updating…</span>
         <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
+        <span class="pill">Rotation <span id="rotIn">--</span>s</span>
       </div>
     </div>
+
     <div class="clock" id="clock">
       --:--
       <small id="clockDate">—</small>
     </div>
   </header>
 
-  <main>
-    <section class="left">
-      <div class="card">
-        <div class="card-inner">
-          <div class="cardHead">
-            <h2>World</h2>
-            <span class="pill" id="worldMeta">—</span>
-          </div>
-          <div class="panel">
-            <ul class="list" id="worldList"></ul>
-            <div class="empty" id="worldEmpty" style="display:none;"></div>
-          </div>
-        </div>
-      </div>
+  <!-- BREAKING -->
+  <div class="breaking" id="breakingBar" aria-label="Breaking News">
+    <div class="breakingTag">BREAKING</div>
+    <div class="breakingTrack" id="breakingTrack">
+      <span>—</span>
+    </div>
+  </div>
 
-      <div class="card">
-        <div class="card-inner">
-          <div class="cardHead">
-            <h2>Local</h2>
-            <span class="pill" id="localMeta">—</span>
+  <main>
+    <!-- LEFT -->
+    <section class="card">
+      <div class="card-inner leftCol">
+
+        <!-- HERO -->
+        <div class="hero">
+          <div class="heroMedia">
+            <img id="heroImg" class="heroImg" alt="" style="display:none;" />
+            <div class="heroOverlay"></div>
+            <div class="heroBug">
+              <span class="dot"></span>
+              <span id="heroSource">TOP STORY</span>
+            </div>
           </div>
-          <div class="panel">
-            <ul class="list" id="localList"></ul>
-            <div class="empty" id="localEmpty" style="display:none;"></div>
+
+          <div class="heroText">
+            <div>
+              <div class="heroKicker">
+                <span class="badge" id="heroSection">WORLD</span>
+                <span class="badge" id="heroAge">—</span>
+                <span class="badge breaking" id="heroBreaking" style="display:none;">BREAKING</span>
+              </div>
+
+              <div class="heroTitle" id="heroTitle">Loading…</div>
+              <div class="heroDeck" id="heroDeck">Fetching latest headlines…</div>
+            </div>
+
+            <div class="heroMeta">
+              <div>
+                <a href="#" id="heroLink" target="_blank" rel="noopener">OPEN STORY</a>
+              </div>
+              <div id="heroUpdated">—</div>
+            </div>
           </div>
         </div>
+
+        <!-- LISTS -->
+        <div class="lists">
+          <div class="card">
+            <div class="card-inner">
+              <div class="cardHead">
+                <h2>World</h2>
+                <span class="pill" id="worldMeta">—</span>
+              </div>
+              <div class="panel">
+                <ul class="list" id="worldList"></ul>
+                <div class="empty" id="worldEmpty" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-inner">
+              <div class="cardHead">
+                <h2>Local</h2>
+                <span class="pill" id="localMeta">—</span>
+              </div>
+              <div class="panel">
+                <ul class="list" id="localList"></ul>
+                <div class="empty" id="localEmpty" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <section class="right">
-      <div class="card">
-        <div class="card-inner">
-          <div class="cardHead">
-            <h2>Markets</h2>
-            <span class="pill" id="mktMeta">TradingView</span>
-          </div>
-          <div class="tvNote">Using OANDA CFD symbols for embed compatibility.</div>
-          <div class="tvWrap">
-            <div id="tv_widget"></div>
-          </div>
-        </div>
-      </div>
+    <!-- RIGHT -->
+    <section class="card">
+      <div class="card-inner rightCol">
+        <div class="stack">
 
-      <div class="bottom">
-        <div class="card miniCard">
+          <!-- MARKETS -->
+          <div class="card">
+            <div class="card-inner" style="height:100%;">
+              <div class="cardHead">
+                <h2>Markets</h2>
+                <span class="pill">TradingView</span>
+              </div>
+              <div class="tvNote">OANDA CFD symbols for embed compatibility</div>
+              <div class="tvWrap">
+                <div id="tv_widget"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WEATHER + TOP LOCAL -->
+          <div class="card">
+            <div class="card-inner" style="height:100%; display:grid; grid-template-rows:auto 1fr; gap:10px;">
+              <div class="cardHead">
+                <h2>Weather</h2>
+                <span class="pill" id="wxMeta">—</span>
+              </div>
+              <div class="wxBox">
+                <div>
+                  <div class="wxTemp"><span id="wxTemp">--</span>°</div>
+                  <div class="wxDesc" id="wxDesc">Loading…</div>
+                </div>
+                <div class="wxMeta">
+                  <div class="wxRow">Feels <b id="wxFeels">--</b>°</div>
+                  <div class="wxRow">Wind <b id="wxWind">--</b> km/h <b id="wxDir">--</b></div>
+                  <div class="wxRow">Precip <b id="wxP">--</b> mm</div>
+                  <div class="wxRow">Hum <b id="wxH">--</b>% • Cloud <b id="wxC">--</b>%</div>
+                </div>
+              </div>
+              <div class="empty" id="wxEmpty" style="display:none;"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TOP LOCAL (compact) -->
+        <div class="card">
           <div class="card-inner">
             <div class="cardHead">
               <h2>Top Local</h2>
               <span class="pill" id="mixMeta">—</span>
             </div>
-            <div class="panel" style="height: calc(100% - 40px);">
+            <div class="panel">
               <ul class="list" id="mixList"></ul>
               <div class="empty" id="mixEmpty" style="display:none;"></div>
             </div>
           </div>
         </div>
 
-        <div class="card miniCard">
-          <div class="card-inner">
-            <div class="cardHead">
-              <h2>Weather</h2>
-              <span class="pill" id="wxMeta">—</span>
-            </div>
-            <div class="wxHero">
-              <div>
-                <div class="wxTemp"><span id="wxTemp">--</span>°</div>
-                <div class="wxDesc" id="wxDesc">Loading…</div>
-              </div>
-              <div class="wxMeta">
-                <div class="wxRow">Feels <b id="wxFeels">--</b>°</div>
-                <div class="wxRow">Wind <b id="wxWind">--</b> km/h <b id="wxDir">--</b></div>
-                <div class="wxRow">Precip <b id="wxP">--</b> mm</div>
-                <div class="wxRow">Hum <b id="wxH">--</b>% • Cloud <b id="wxC">--</b>%</div>
-              </div>
-            </div>
-            <div class="empty" id="wxEmpty" style="display:none;"></div>
-          </div>
-        </div>
       </div>
     </section>
   </main>
 
-  <div class="ticker" aria-label="Ticker">
+  <!-- TICKER -->
+  <div class="ticker" aria-label="News Ticker">
+    <div class="tickerTag">LIVE</div>
     <div class="tickerTrack" id="tickerTrack">
       <span class="tickMuted">Loading…</span>
     </div>
@@ -320,11 +640,14 @@
     // ==========================
     const LOCATION = { lat: 44.7326, lon: -63.6533, label: "Bedford, Nova Scotia" };
     const REFRESH_MS = 4 * 60 * 1000;
-    let nextRefreshAt = Date.now() + REFRESH_MS;
 
-    // Paste your RSS2JSON key here (optional but recommended)
-    const RSS2JSON_API_KEY = "";
+    // Headline rotation interval (seconds)
+    const ROTATE_S = 12;
 
+    // Paste your RSS2JSON API key here (recommended)
+    const RSS2JSON_API_KEY = ""; // e.g. "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+    // RSS feeds
     const FEEDS = {
       world: [
         { name:"BBC World", url:"https://feeds.bbci.co.uk/news/world/rss.xml" },
@@ -335,6 +658,25 @@
         { name:"Global Halifax",  url:"https://globalnews.ca/halifax/feed/" }
       ]
     };
+
+    // TradingView symbols (embed-friendly)
+    const MARKET_SYMBOLS = [
+      ["S&P 500 (CFD)","OANDA:SPX500USD|1D"],
+      ["US 30 (CFD)","OANDA:US30USD|1D"],
+      ["Nasdaq 100 (CFD)","OANDA:NAS100USD|1D"],
+      ["TSX","TSX:TSX|1D"]
+    ];
+
+    // ==========================
+    // STATE
+    // ==========================
+    let nextRefreshAt = Date.now() + REFRESH_MS;
+    let rotateIn = ROTATE_S;
+    let worldItems = [];
+    let localItems = [];
+    let heroIndex = 0;
+    let heroMode = "world"; // alternate world/local on rotate
+    let breakingItems = [];
 
     // ==========================
     // HELPERS
@@ -415,12 +757,37 @@
         ul.appendChild(li);
       });
     }
-    function setTicker(parts){
-      const track = $("tickerTrack");
-      const safe = parts.filter(Boolean);
-      const html = safe.map(p => `<span>${escapeHtml(p)}</span>`).join(`<span class="tickSep"> • </span>`);
-      const fallback = `<span class="tickMuted">Ticker online • Weather OK • News OK</span>`;
-      track.innerHTML = (html || fallback) + `<span class="tickSep"> • </span>` + (html || fallback);
+    function rss2jsonUrl(feedUrl){
+      const base = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(feedUrl);
+      return RSS2JSON_API_KEY ? (base + "&api_key=" + encodeURIComponent(RSS2JSON_API_KEY)) : base;
+    }
+    function bestImage(it){
+      // RSS2JSON often has enclosure.link, thumbnail, or may embed media in description.
+      const enc = it && it.enclosure && it.enclosure.link ? it.enclosure.link : "";
+      if(enc && /^https?:\/\//i.test(enc)) return enc;
+
+      const thumb = it && it.thumbnail ? it.thumbnail : "";
+      if(thumb && /^https?:\/\//i.test(thumb)) return thumb;
+
+      const desc = it && it.description ? it.description : "";
+      const m = /<img[^>]+src=["']([^"']+)["']/i.exec(desc);
+      if(m && m[1] && /^https?:\/\//i.test(m[1])) return m[1];
+
+      return "";
+    }
+    function stripHtml(html){
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html || "";
+      const text = (tmp.textContent || tmp.innerText || "").trim();
+      return text.replace(/\s+/g," ");
+    }
+    function isBreakingItem(x){
+      const t = (x.title || "").toLowerCase();
+      const s = (x.source || "").toLowerCase();
+      const d = (x.description || "").toLowerCase();
+      return t.includes("breaking") || t.includes("urgent") || t.includes("live:") ||
+             d.includes("breaking") || d.includes("urgent") ||
+             s.includes("breaking");
     }
 
     // ==========================
@@ -460,26 +827,26 @@
       $("wxDir").textContent   = windDirText(c.wind_direction_10m);
       $("wxDesc").textContent  = wxText(c.weather_code);
       $("wxMeta").textContent  = "UPDATED " + fmtTime12(new Date(c.time));
-      setEmpty("wx", "");
+
+      $("wxEmpty").style.display = "none";
     }
 
     // ==========================
     // NEWS (RSS2JSON)
     // ==========================
-    function rss2jsonUrl(feedUrl){
-      const base = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(feedUrl);
-      return RSS2JSON_API_KEY ? (base + "&api_key=" + encodeURIComponent(RSS2JSON_API_KEY)) : base;
-    }
     async function loadFeeds(feedList){
       const groups = [];
       for(const f of feedList){
         try{
           const data = await fetchJson(rss2jsonUrl(f.url));
           const items = (data.items || []).map(it => ({
-            title: it.title,
-            link: it.link,
+            title: it.title || "",
+            link: it.link || "",
             pubDate: it.pubDate || it.published || "",
-            source: f.name
+            source: f.name,
+            thumbnail: it.thumbnail || "",
+            enclosure: it.enclosure || {},
+            description: it.description || ""
           })).filter(x => x.title);
           groups.push({ name:f.name, items });
         }catch(e){
@@ -488,6 +855,7 @@
       }
       return groups;
     }
+
     function mergeAndSort(groups){
       const all = [];
       groups.forEach(g => g.items.forEach(x => all.push(x)));
@@ -504,19 +872,100 @@
     }
 
     // ==========================
-    // MARKETS (TradingView) - OANDA CFD symbols
+    // HERO / BREAKING / TICKER
+    // ==========================
+    function setBreakingBar(items){
+      const bar = $("breakingBar");
+      const track = $("breakingTrack");
+      if(!items || !items.length){
+        bar.classList.remove("on");
+        return;
+      }
+      bar.classList.add("on");
+
+      const parts = items.slice(0, 6).map(x => x.title).filter(Boolean);
+      const html = parts.map(t => `<span>${escapeHtml(t)}</span>`).join(`<span class="breakingSep"> • </span>`);
+      // Duplicate for seamless loop
+      track.innerHTML = (html || "<span>BREAKING</span>") + `<span class="breakingSep"> • </span>` + (html || "<span>BREAKING</span>");
+    }
+
+    function setTicker(){
+      const track = $("tickerTrack");
+      const worldTop = worldItems[0]?.title || "—";
+      const localTop = localItems[0]?.title || "—";
+      const wx = ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°";
+
+      const parts = [];
+      if(breakingItems.length){
+        parts.push("BREAKING: " + breakingItems[0].title);
+      }
+      parts.push("WORLD: " + worldTop);
+      parts.push("LOCAL: " + localTop);
+      parts.push("WEATHER: " + wx);
+      parts.push("MARKETS: SPX500 • US30 • NAS100 • TSX");
+
+      const html = parts.map(p => `<span>${escapeHtml(p)}</span>`).join(`<span class="tickSep"> • </span>`);
+      const fallback = `<span class="tickMuted">LIVE • NEWS • MARKETS • WEATHER</span>`;
+      track.innerHTML = (html || fallback) + `<span class="tickSep"> • </span>` + (html || fallback);
+    }
+
+    function setHeroFrom(item, sectionLabel){
+      const title = item?.title || "—";
+      const link  = item?.link || "#";
+      const when  = item?.pubDate ? timeAgo(item.pubDate) : "—";
+      const source= item?.source || "TOP STORY";
+      const img   = bestImage(item);
+      const desc  = stripHtml(item?.description || "");
+      const deck  = desc ? desc : "Tap OPEN STORY to read more.";
+
+      $("heroTitle").textContent = title;
+      $("heroDeck").textContent = deck;
+      $("heroSource").textContent = source.toUpperCase();
+      $("heroSection").textContent = sectionLabel.toUpperCase();
+      $("heroAge").textContent = when ? when.toUpperCase() : "—";
+      $("heroLink").href = link;
+      $("heroUpdated").textContent = "UPDATED " + fmtTime12(new Date());
+
+      const isBreaking = item && isBreakingItem(item);
+      $("heroBreaking").style.display = isBreaking ? "" : "none";
+
+      const imgEl = $("heroImg");
+      if(img){
+        imgEl.onload = () => { imgEl.style.display = ""; };
+        imgEl.onerror = () => { imgEl.style.display = "none"; imgEl.removeAttribute("src"); };
+        imgEl.src = img;
+      } else {
+        imgEl.style.display = "none";
+        imgEl.removeAttribute("src");
+      }
+    }
+
+    function rotateHero(){
+      const pool = (heroMode === "world") ? worldItems : localItems;
+      const label = (heroMode === "world") ? "World" : "Local";
+
+      if(pool && pool.length){
+        const idx = heroIndex % pool.length;
+        setHeroFrom(pool[idx], label);
+        heroIndex++;
+      } else {
+        // fallback
+        setHeroFrom({ title:"Waiting for headlines…", source:"SYSTEM", description:"" }, label);
+      }
+
+      // alternate modes so it feels like a channel
+      heroMode = (heroMode === "world") ? "local" : "world";
+    }
+
+    // ==========================
+    // MARKETS (TradingView embed)
     // ==========================
     function initTradingView(){
       const mount = $("tv_widget");
       mount.innerHTML = "";
 
       const payload = {
-        "symbols": [
-          ["S&P 500 (CFD)","OANDA:SPX500USD|1D"],
-          ["US 30 (CFD)","OANDA:US30USD|1D"],
-          ["Nasdaq 100 (CFD)","OANDA:NAS100USD|1D"],
-          ["TSX","TSX:TSX|1D"]
-        ],
+        "symbols": MARKET_SYMBOLS,
         "chartOnly": false,
         "width": "100%",
         "height": "100%",
@@ -554,50 +1003,66 @@
       const started = Date.now();
       $("updated").textContent = "UPDATING…";
 
+      $("place").textContent = LOCATION.label;
+
+      // Weather
       await loadWeather().catch(() => {
         $("wxMeta").textContent = "NO DATA";
         $("wxDesc").textContent = "UNAVAILABLE";
-        setEmpty("wx", "Weather failed to load.");
+        $("wxEmpty").style.display = "";
+        $("wxEmpty").textContent = "Weather failed to load.";
       });
 
+      // News
       const [worldGroups, localGroups] = await Promise.all([
         loadFeeds(FEEDS.world),
         loadFeeds(FEEDS.local)
       ]);
 
-      const world = mergeAndSort(worldGroups);
-      const local = mergeAndSort(localGroups);
+      worldItems = mergeAndSort(worldGroups);
+      localItems = mergeAndSort(localGroups);
 
-      if(world.length){
-        $("worldMeta").textContent = world.length + " ITEMS";
+      // Breaking candidates from both pools (recent)
+      const combined = [...worldItems.slice(0, 20), ...localItems.slice(0, 20)];
+      breakingItems = combined.filter(isBreakingItem).slice(0, 8);
+
+      // Render lists
+      if(worldItems.length){
+        $("worldMeta").textContent = worldItems.length + " ITEMS";
         setEmpty("world", "");
-        renderList("worldList", world, 10);
+        renderList("worldList", worldItems, 10);
       } else {
         $("worldMeta").textContent = "NO DATA";
-        setEmpty("world", "World news failed. Check RSS2JSON key / rate limits.");
+        setEmpty("world", "World news failed. Check RSS2JSON key / network.");
       }
 
-      if(local.length){
-        $("localMeta").textContent = local.length + " ITEMS";
+      if(localItems.length){
+        $("localMeta").textContent = localItems.length + " ITEMS";
         setEmpty("local", "");
-        renderList("localList", local, 10);
+        renderList("localList", localItems, 10);
 
-        $("mixMeta").textContent = Math.min(18, local.length) + " ITEMS";
+        $("mixMeta").textContent = Math.min(14, localItems.length) + " ITEMS";
         setEmpty("mix", "");
-        renderList("mixList", local, 18);
+        renderList("mixList", localItems, 14);
       } else {
         $("localMeta").textContent = "NO DATA";
         $("mixMeta").textContent = "NO DATA";
-        setEmpty("local", "Local news failed. Check RSS2JSON key / rate limits.");
+        setEmpty("local", "Local news failed. Check RSS2JSON key / network.");
         setEmpty("mix", "Local news failed (see Local panel).");
       }
 
-      const tickerParts = [];
-      tickerParts.push("WORLD: " + (world[0]?.title || "—"));
-      tickerParts.push("LOCAL: " + (local[0]?.title || "—"));
-      tickerParts.push("WEATHER: " + ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°");
-      tickerParts.push("MARKETS: SPX500 • US30 • NAS100 • TSX");
-      setTicker(tickerParts);
+      // Bars & ticker
+      setBreakingBar(breakingItems);
+      setTicker();
+
+      // Update hero immediately using top story
+      const topWorld = worldItems[0];
+      const topLocal = localItems[0];
+
+      // Prefer breaking if present, then world, then local
+      const heroPick = breakingItems[0] || topWorld || topLocal;
+      const heroLabel = breakingItems[0] ? "Breaking" : (topWorld ? "World" : "Local");
+      setHeroFrom(heroPick || {title:"No headlines", source:"SYSTEM"}, heroLabel);
 
       const took = Math.max(1, Math.round((Date.now() - started)/1000));
       $("updated").textContent = "UPDATED " + fmtTime12(new Date()) + " • " + took + "s";
@@ -607,15 +1072,27 @@
     }
 
     function start(){
-      $("place").textContent = LOCATION.label;
-
+      // Initial UI ticks
       tickClock(); setInterval(tickClock, 1000);
       tickCountdown(); setInterval(tickCountdown, 1000);
 
+      // Rotate countdown + rotate hero
+      $("rotIn").textContent = String(rotateIn);
+      setInterval(() => {
+        rotateIn -= 1;
+        if(rotateIn <= 0){
+          rotateHero();
+          rotateIn = ROTATE_S;
+        }
+        $("rotIn").textContent = String(rotateIn);
+      }, 1000);
+
+      // Markets
       initTradingView();
 
-      refreshAll().catch(()=>{ $("updated").textContent = "UPDATE FAILED"; });
-      setInterval(()=>{ refreshAll().catch(()=>{}); }, REFRESH_MS);
+      // Initial load + refresh schedule
+      refreshAll().catch(() => { $("updated").textContent = "UPDATE FAILED"; });
+      setInterval(() => { refreshAll().catch(() => {}); }, REFRESH_MS);
     }
 
     document.addEventListener("DOMContentLoaded", start);
