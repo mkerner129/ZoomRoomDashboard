@@ -15,6 +15,7 @@
       --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
       --slots: 12;
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -28,6 +29,7 @@
         linear-gradient(180deg, var(--bgTop), var(--bgMid) 50%, var(--bgBot));
       overflow:hidden;
     }
+
     .sheen{
       position:absolute; inset:-60% -60%;
       background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.08) 45%, transparent 55%);
@@ -51,24 +53,33 @@
       position:relative;
       z-index:2;
     }
-    .brand{display:flex;align-items:flex-end;gap:14px;}
-    .logo{
-      width:44px;height:44px;border-radius:14px;
-      background:
-        radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 60%),
-        linear-gradient(135deg, rgba(54,194,255,.95), rgba(124,77,255,.92));
-      box-shadow: var(--shadow2);
-      border:1px solid rgba(255,255,255,.22);
+
+    /* Brand area (left side header) */
+    .brand{
+      display:flex;
+      align-items:flex-end;
+      gap:14px;
+      min-width: 0;
     }
-    .title{
-      font-size:30px;
-      font-weight:950;
-      letter-spacing:-.5px;
+
+    /* BIG location line */
+    .place{
+      font-size:34px;
+      font-weight:1000;
+      letter-spacing:-.6px;
       line-height:1.05;
-      text-transform:uppercase;
+      text-transform:none;
+      color:#fff;
+      text-shadow: 0 10px 24px rgba(0,0,0,.35);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 980px;
     }
+
+    /* Pills row under location */
     .subtitle{
-      margin-top:6px;
+      margin-top:10px;
       color:var(--muted);
       font-size:13px;
       font-weight:800;
@@ -79,6 +90,7 @@
       flex-wrap:wrap;
       align-items:center;
     }
+
     .pill{
       display:inline-flex;align-items:center;gap:8px;
       padding:7px 12px;border:1px solid var(--border);
@@ -117,6 +129,7 @@
       backdrop-filter: blur(12px);
     }
     .card-inner{ padding:18px; }
+
     .left{display:grid;grid-template-rows:auto auto 1fr;gap:14px;height:100%;}
 
     .hero{
@@ -361,6 +374,7 @@
       body{overflow:auto}
       main{grid-template-columns: 1fr; height:auto}
       footer{position:static; padding:10px 26px 16px}
+      .place{max-width: 100%;}
     }
   </style>
 </head>
@@ -369,11 +383,10 @@
 
   <header>
     <div class="brand">
-      <div class="logo"></div>
-      <div>
-        
+      <!-- Removed the square logo and removed "Weather Center" text -->
+      <div style="min-width:0;">
+        <div id="placeLabel" class="place">Locating…</div>
         <div class="subtitle">
-          <span id="placeLabel">Locating…</span>
           <span class="pill" id="wxUpdated">Updating…</span>
           <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
           <span class="pill" id="locMode">LOC: —</span>
@@ -487,7 +500,7 @@
     var TRACE_OPACITY = 0.06;
 
     // Bedford fallback
-    var FALLBACK = { lat: 44.7326, lon: -63.6533, label: "Fallback, Nova Scotia" };
+    var FALLBACK = { lat: 44.7326, lon: -63.6533, label: "Bedford, Nova Scotia" };
     var LOCATION = { lat: FALLBACK.lat, lon: FALLBACK.lon, label: FALLBACK.label };
 
     var __svgId = 0;
@@ -552,7 +565,6 @@
     }
 
     // IP-based geolocation (no permission prompt). Uses ipapi.co (no key).
-    // If blocked by network/CORS, it just falls back.
     function ipGeolocate(){
       el("status").textContent = "LOCATING (IP)…";
       return fetch("https://ipapi.co/json/", { cache: "no-store" })
@@ -565,7 +577,6 @@
             LOCATION.lat = Number(j.latitude);
             LOCATION.lon = Number(j.longitude);
 
-            // Nice label if available
             var parts = [];
             if(j.city) parts.push(j.city);
             if(j.region) parts.push(j.region);
@@ -577,9 +588,7 @@
           }
           return false;
         })
-        .catch(function(){
-          return false;
-        });
+        .catch(function(){ return false; });
     }
 
     // Build YYYY-MM-DDTHH key in Open-Meteo's timezone (using utc_offset_seconds)
