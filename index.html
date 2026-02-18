@@ -6,23 +6,13 @@
   <title>TV Weather Board</title>
   <style>
     :root{
-      --bgTop:#061a3a;
-      --bgMid:#0a2a5f;
-      --bgBot:#081833;
-
-      --text:#eaf2ff;
-      --muted:#b9d1ff;
-
+      --bgTop:#061a3a; --bgMid:#0a2a5f; --bgBot:#081833;
+      --text:#eaf2ff; --muted:#b9d1ff;
       --border: rgba(255,255,255,.14);
       --shadow: 0 18px 44px rgba(0,0,0,.45);
       --shadow2: 0 10px 22px rgba(0,0,0,.35);
-
-      --tileRadius: 18px;
-      --cardRadius: 26px;
-
+      --tileRadius: 18px; --cardRadius: 26px;
       --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
-
-      /* driven by JS */
       --slots: 12;
     }
 
@@ -42,10 +32,7 @@
 
     .sheen{
       position:absolute; inset:-60% -60%;
-      background: linear-gradient(120deg,
-        transparent 35%,
-        rgba(255,255,255,.08) 45%,
-        transparent 55%);
+      background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.08) 45%, transparent 55%);
       transform: rotate(8deg);
       animation: sweep 14s linear infinite;
       pointer-events:none;
@@ -246,7 +233,6 @@
     }
 
     .bars-wrap{position:relative;}
-
     .bars{
       display:grid;
       grid-template-columns: repeat(var(--slots), 1fr);
@@ -262,7 +248,7 @@
       position:relative;
     }
 
-    /* Remove NOW line */
+    /* REMOVE NOW LINE */
     #nowLine{ display:none !important; }
 
     .bar{
@@ -272,8 +258,7 @@
       box-shadow: 0 10px 18px rgba(0,0,0,.22);
       position:relative;
       overflow:hidden;
-      background: linear-gradient(
-        to top,
+      background: linear-gradient(to top,
         rgba(185,232,255,.85) 0%,
         rgba(90,188,255,.95) 45%,
         rgba(18,106,255,1) 100%
@@ -286,10 +271,7 @@
       content:"";
       position:absolute;
       inset:-40% -60%;
-      background: linear-gradient(120deg,
-        transparent 35%,
-        rgba(255,255,255,.20) 45%,
-        transparent 55%);
+      background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.20) 45%, transparent 55%);
       transform: rotate(8deg);
       animation: shimmer 2.4s linear infinite;
       opacity:.55;
@@ -309,19 +291,12 @@
       pointer-events:none;
     }
 
-    /* Trace bars: nearly invisible + no shimmer */
-    .bar.trace{
-      opacity: .06 !important;
-      border-color: rgba(255,255,255,.10);
-      box-shadow: none !important;
-    }
-    .bar.trace::before{ animation: none !important; opacity: 0 !important; }
-    .bar.trace::after{ opacity: .12 !important; }
+    .bar.trace{ opacity:.06 !important; border-color: rgba(255,255,255,.10); box-shadow:none !important; }
+    .bar.trace::before{ animation:none !important; opacity:0 !important; }
+    .bar.trace::after{ opacity:.12 !important; }
 
     .bar-value{
-      position:absolute;
-      left:0; right:0;
-      top:6px;
+      position:absolute; left:0; right:0; top:6px;
       text-align:center;
       font-size:10px;
       font-weight:1000;
@@ -331,19 +306,8 @@
       opacity:.95;
       pointer-events:none;
     }
-    .bar.heavy{
-      box-shadow:
-        0 10px 18px rgba(0,0,0,.22),
-        0 0 22px rgba(90,188,255,.55),
-        0 0 44px rgba(18,106,255,.35);
-      border-color: rgba(255,255,255,.22);
-    }
-    .bar.moderate{
-      box-shadow:
-        0 10px 18px rgba(0,0,0,.22),
-        0 0 16px rgba(90,188,255,.35);
-      border-color: rgba(255,255,255,.18);
-    }
+    .bar.heavy{ box-shadow: 0 10px 18px rgba(0,0,0,.22), 0 0 22px rgba(90,188,255,.55), 0 0 44px rgba(18,106,255,.35); border-color: rgba(255,255,255,.22); }
+    .bar.moderate{ box-shadow: 0 10px 18px rgba(0,0,0,.22), 0 0 16px rgba(90,188,255,.35); border-color: rgba(255,255,255,.18); }
 
     .bar-labels{
       display:grid;
@@ -356,10 +320,7 @@
       letter-spacing:.6px;
       text-transform:uppercase;
     }
-    .bar-labels span{
-      text-align:center;
-      min-height: 12px;
-    }
+    .bar-labels span{ text-align:center; min-height:12px; }
 
     /* ======= RIGHT PANEL ======= */
     .right{height:100%;display:grid;grid-template-rows:1fr auto;gap:16px;min-height:0;}
@@ -415,7 +376,7 @@
       <div>
         <div class="title">Weather Center</div>
         <div class="subtitle">
-          <span id="placeLabel">Locating…</span>
+          <span id="placeLabel">Bedford, Nova Scotia</span>
           <span class="pill" id="wxUpdated">Updating…</span>
           <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
         </div>
@@ -466,15 +427,11 @@
             <span class="pill" id="precipMode">mm</span>
           </div>
 
-          <div id="precipBanner" class="pill" style="align-self:flex-start;background:rgba(0,0,0,.18);">
-            —
-          </div>
+          <div id="precipBanner" class="pill" style="align-self:flex-start;background:rgba(0,0,0,.18);">—</div>
 
           <div class="precip-chart">
             <div class="precip-scale">
-              <div>HEAVY</div>
-              <div>MODERATE</div>
-              <div>LIGHT</div>
+              <div>HEAVY</div><div>MODERATE</div><div>LIGHT</div>
             </div>
 
             <div class="bars-wrap">
@@ -527,20 +484,19 @@
     var SLOTS = 12;
     var REFRESH_MS = 5 * 60 * 1000;
 
-    // Trace settings
     var DRY_THRESHOLD_MM = 0.1;
     var TRACE_HEIGHT_PX = 2;
     var TRACE_OPACITY = 0.06;
 
-    // Fallback if geolocation is blocked/unavailable
+    // Bedford, NS fallback (always works)
     var FALLBACK = {
-      lat: 44.7326, lon: -63.6533,
-      tz: "America/Halifax",
-      label: "Bedford, Nova Scotia"
+      lat: 44.7326,
+      lon: -63.6533,
+      label: "Fallback, Nova Scotia"
     };
 
-    // Will be set automatically
-    var LOCATION = { lat: FALLBACK.lat, lon: FALLBACK.lon, tz: FALLBACK.tz, label: FALLBACK.label };
+    // Location will try to override via geolocation; otherwise fallback stays.
+    var LOCATION = { lat: FALLBACK.lat, lon: FALLBACK.lon, label: FALLBACK.label };
 
     var __svgId = 0;
     var nextRefreshAt = Date.now() + REFRESH_MS;
@@ -583,76 +539,49 @@
       var s = Math.floor(left / 1000);
       var m = Math.floor(s / 60);
       var r = s % 60;
-      var txt = String(m).padStart(2,'0') + ":" + String(r).padStart(2,'0');
-      var node = document.getElementById("refreshIn");
-      if(node) node.textContent = txt;
+      el("refreshIn").textContent = String(m).padStart(2,'0') + ":" + String(r).padStart(2,'0');
     }
 
-    // Reverse geocode via Open-Meteo: sets label + timezone from coordinates
-    function reverseGeocode(lat, lon){
-      var url = "https://geocoding-api.open-meteo.com/v1/reverse?latitude=" + encodeURIComponent(lat) +
-                "&longitude=" + encodeURIComponent(lon) +
-                "&language=en&count=1";
-      return fetch(url, {cache:"no-store"})
-        .then(function(res){
-          if(!res.ok) throw new Error("Reverse geocoding failed");
-          return res.json();
-        })
-        .then(function(data){
-          var r = (data && data.results && data.results[0]) ? data.results[0] : null;
-          if(!r) return;
-
-          var parts = [];
-          if(r.name) parts.push(r.name);
-          if(r.admin1) parts.push(r.admin1);
-          if(r.country) parts.push(r.country);
-          LOCATION.label = parts.join(", ") || LOCATION.label;
-
-          if(r.timezone) LOCATION.tz = r.timezone;
-        })
-        .catch(function(){ /* keep fallback */ });
-    }
-
-    // Auto location from the browser (GPS/location services). Not IP.
-    function initLocation(){
-      el("placeLabel").textContent = "Locating…";
-      el("status").textContent = "LOCATING";
-
+    // Attempt browser geolocation (may be blocked in Zoom signage).
+    function tryGeolocationOnce(){
       return new Promise(function(resolve){
-        if(!navigator.geolocation){
-          // No geolocation support
-          LOCATION = { lat: FALLBACK.lat, lon: FALLBACK.lon, tz: FALLBACK.tz, label: FALLBACK.label };
-          el("placeLabel").textContent = LOCATION.label;
-          el("status").textContent = "FALLBACK (NO GEO)";
-          resolve();
-          return;
-        }
+        if(!navigator.geolocation) return resolve(false);
 
         navigator.geolocation.getCurrentPosition(
           function(pos){
             LOCATION.lat = pos.coords.latitude;
             LOCATION.lon = pos.coords.longitude;
-            // keep tz/label until reverse geocode returns
             el("status").textContent = "GEO OK";
-            reverseGeocode(LOCATION.lat, LOCATION.lon).finally(function(){
-              el("placeLabel").textContent = LOCATION.label;
-              resolve();
-            });
+            resolve(true);
           },
           function(){
-            // Permission denied / timeout / unavailable
-            LOCATION = { lat: FALLBACK.lat, lon: FALLBACK.lon, tz: FALLBACK.tz, label: FALLBACK.label };
-            el("placeLabel").textContent = LOCATION.label;
-            el("status").textContent = "FALLBACK (GEO OFF)";
-            resolve();
+            el("status").textContent = "GEO OFF (USING BEDFORD)";
+            resolve(false);
           },
-          {
-            enableHighAccuracy: false,
-            timeout: 5000,
-            maximumAge: 10 * 60 * 1000
-          }
+          { enableHighAccuracy:false, timeout:4000, maximumAge: 10*60*1000 }
         );
       });
+    }
+
+    // Build a YYYY-MM-DDTHH key in the SAME timezone Open-Meteo used (via utc_offset_seconds).
+    // This prevents the “bars disappeared” bug if device timezone differs.
+    function nowKeyForOffset(utcOffsetSeconds){
+      var ms = Date.now() + Number(utcOffsetSeconds || 0) * 1000;
+      var d = new Date(ms);
+      var yyyy = d.getUTCFullYear();
+      var mm = String(d.getUTCMonth()+1).padStart(2,"0");
+      var dd = String(d.getUTCDate()).padStart(2,"0");
+      var hh = String(d.getUTCHours()).padStart(2,"0");
+      return yyyy + "-" + mm + "-" + dd + "T" + hh;
+    }
+
+    function findStartIndex(times, utcOffsetSeconds){
+      var key = nowKeyForOffset(utcOffsetSeconds);
+      var start = 0;
+      for(var i=0;i<times.length;i++){
+        if(String(times[i]).slice(0,13) >= key){ start=i; break; }
+      }
+      return start;
     }
 
     function svgFor(code, size){
@@ -664,7 +593,6 @@
       function base(inner){
         return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>';
       }
-
       function partlyFallback(){
         return base(
           '<defs>' +
@@ -684,7 +612,6 @@
           '</g>'
         );
       }
-
       if(!isFinite(wc)) return partlyFallback();
 
       var fog = {45:1,48:1};
@@ -703,98 +630,61 @@
 
       if(kind==="clear"){
         return base(
-          '<defs>' +
-            '<radialGradient id="sun_' + uid + '" cx="35%" cy="35%" r="70%">' +
-              '<stop offset="0" stop-color="#FFF1B0"/>' +
-              '<stop offset="1" stop-color="#FFB020"/>' +
-            '</radialGradient>' +
-          '</defs>' +
+          '<defs><radialGradient id="sun_' + uid + '" cx="35%" cy="35%" r="70%">' +
+          '<stop offset="0" stop-color="#FFF1B0"/><stop offset="1" stop-color="#FFB020"/></radialGradient></defs>' +
           '<circle cx="32" cy="32" r="14" fill="url(#sun_' + uid + ')"/>' +
           '<g stroke="#FFCF5A" stroke-width="2" stroke-linecap="round" opacity=".95">' +
-            '<path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>' +
-            '<path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>' +
+          '<path d="M32 8v6"/><path d="M32 50v6"/><path d="M8 32h6"/><path d="M50 32h6"/>' +
+          '<path d="M14 14l4 4"/><path d="M46 46l4 4"/><path d="M46 18l4-4"/><path d="M14 50l4-4"/>' +
           '</g>'
         );
       }
-
       if(kind==="partly") return partlyFallback();
 
       if(kind==="fog"){
         return base(
-          '<defs>' +
-            '<linearGradient id="fg_' + uid + '" x1="0" x2="1">' +
-              '<stop offset="0" stop-color="#EAF2FF"/>' +
-              '<stop offset="1" stop-color="#BFD8FF"/>' +
-            '</linearGradient>' +
-          '</defs>' +
+          '<defs><linearGradient id="fg_' + uid + '" x1="0" x2="1">' +
+          '<stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#BFD8FF"/></linearGradient></defs>' +
           '<rect x="10" y="14" width="44" height="36" rx="16" fill="url(#fg_' + uid + ')" opacity=".95"/>' +
           '<g fill="#9FB6D8" opacity=".98">' +
-            '<rect x="12" y="26" width="40" height="4" rx="2"/>' +
-            '<rect x="10" y="34" width="44" height="4" rx="2"/>' +
-            '<rect x="14" y="42" width="36" height="4" rx="2"/>' +
+          '<rect x="12" y="26" width="40" height="4" rx="2"/>' +
+          '<rect x="10" y="34" width="44" height="4" rx="2"/>' +
+          '<rect x="14" y="42" width="36" height="4" rx="2"/>' +
           '</g>'
         );
       }
 
       if(kind==="rain"){
         return base(
-          '<defs>' +
-            '<linearGradient id="cloud3_' + uid + '" x1="0" x2="1">' +
-              '<stop offset="0" stop-color="#EAF2FF"/>' +
-              '<stop offset="1" stop-color="#BFD8FF"/>' +
-            '</linearGradient>' +
-            '<linearGradient id="drop_' + uid + '" x1="0" x2="0" y1="0" y2="1">' +
-              '<stop offset="0" stop-color="#36C2FF"/>' +
-              '<stop offset="1" stop-color="#2563EB"/>' +
-            '</linearGradient>' +
-          '</defs>' +
-          '<g fill="url(#cloud3_' + uid + ')">' +
-            '<ellipse cx="36" cy="24" rx="18" ry="10"/>' +
-            '<ellipse cx="22" cy="28" rx="14" ry="8"/>' +
-          '</g>' +
+          '<defs><linearGradient id="cloud3_' + uid + '" x1="0" x2="1">' +
+          '<stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#BFD8FF"/></linearGradient>' +
+          '<linearGradient id="drop_' + uid + '" x1="0" x2="0" y1="0" y2="1">' +
+          '<stop offset="0" stop-color="#36C2FF"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs>' +
+          '<g fill="url(#cloud3_' + uid + ')"><ellipse cx="36" cy="24" rx="18" ry="10"/><ellipse cx="22" cy="28" rx="14" ry="8"/></g>' +
           '<g fill="url(#drop_' + uid + ')">' +
-            '<path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>' +
-            '<path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>' +
-            '<path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>' +
+          '<path d="M22 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>' +
+          '<path d="M34 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>' +
+          '<path d="M46 40c0 4-4 6-4 10 0 2 4 4 4 4s4-2 4-4c0-4-4-6-4-10z"/>' +
           '</g>'
         );
       }
 
       if(kind==="snow"){
         return base(
-          '<defs>' +
-            '<linearGradient id="cloud4_' + uid + '" x1="0" x2="1">' +
-              '<stop offset="0" stop-color="#EAF2FF"/>' +
-              '<stop offset="1" stop-color="#BFD8FF"/>' +
-            '</linearGradient>' +
-          '</defs>' +
-          '<g fill="url(#cloud4_' + uid + ')">' +
-            '<ellipse cx="36" cy="24" rx="18" ry="10"/>' +
-            '<ellipse cx="22" cy="28" rx="14" ry="8"/>' +
-          '</g>' +
-          '<g fill="#D7F0FF">' +
-            '<circle cx="22" cy="46" r="2.2"/><circle cx="32" cy="50" r="2.2"/>' +
-            '<circle cx="42" cy="46" r="2.2"/><circle cx="50" cy="50" r="2.2"/>' +
-          '</g>'
+          '<defs><linearGradient id="cloud4_' + uid + '" x1="0" x2="1">' +
+          '<stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#BFD8FF"/></linearGradient></defs>' +
+          '<g fill="url(#cloud4_' + uid + ')"><ellipse cx="36" cy="24" rx="18" ry="10"/><ellipse cx="22" cy="28" rx="14" ry="8"/></g>' +
+          '<g fill="#D7F0FF"><circle cx="22" cy="46" r="2.2"/><circle cx="32" cy="50" r="2.2"/><circle cx="42" cy="46" r="2.2"/><circle cx="50" cy="50" r="2.2"/></g>'
         );
       }
 
       if(kind==="thunder"){
         return base(
-          '<defs>' +
-            '<linearGradient id="cloud5_' + uid + '" x1="0" x2="1">' +
-              '<stop offset="0" stop-color="#EAF2FF"/>' +
-              '<stop offset="1" stop-color="#BFD8FF"/>' +
-            '</linearGradient>' +
-            '<linearGradient id="bolt_' + uid + '" x1="0" x2="0" y1="0" y2="1">' +
-              '<stop offset="0" stop-color="#FFE08A"/>' +
-              '<stop offset="1" stop-color="#FFB020"/>' +
-            '</linearGradient>' +
-          '</defs>' +
-          '<g fill="url(#cloud5_' + uid + ')">' +
-            '<ellipse cx="36" cy="24" rx="18" ry="10"/>' +
-            '<ellipse cx="22" cy="28" rx="14" ry="8"/>' +
-          '</g>' +
+          '<defs><linearGradient id="cloud5_' + uid + '" x1="0" x2="1">' +
+          '<stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#BFD8FF"/></linearGradient>' +
+          '<linearGradient id="bolt_' + uid + '" x1="0" x2="0" y1="0" y2="1">' +
+          '<stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#FFB020"/></linearGradient></defs>' +
+          '<g fill="url(#cloud5_' + uid + ')"><ellipse cx="36" cy="24" rx="18" ry="10"/><ellipse cx="22" cy="28" rx="14" ry="8"/></g>' +
           '<polygon points="30,38 40,38 32,56 36,44 26,44" fill="url(#bolt_' + uid + ')"/>'
         );
       }
@@ -848,145 +738,6 @@
       return "WEATHER UPDATE: STAY PREPARED";
     }
 
-    // Uses LOCAL device time to avoid UTC mismatch
-    function findStartIndex(times){
-      var now = new Date();
-      var yyyy = now.getFullYear();
-      var mm = String(now.getMonth() + 1).padStart(2,"0");
-      var dd = String(now.getDate()).padStart(2,"0");
-      var hh = String(now.getHours()).padStart(2,"0");
-      var nowKey = yyyy + "-" + mm + "-" + dd + "T" + hh;
-
-      var start = 0;
-      for(var i=0;i<times.length;i++){
-        if(String(times[i]).slice(0,13) >= nowKey){ start=i; break; }
-      }
-      return start;
-    }
-
-    function renderHourly(data){
-      var hourlyEl = el("hourly");
-      hourlyEl.innerHTML = "";
-
-      var times = (data.hourly && data.hourly.time) ? data.hourly.time : [];
-      var temp  = (data.hourly && data.hourly.temperature_2m) ? data.hourly.temperature_2m : [];
-      var code  = (data.hourly && data.hourly.weather_code) ? data.hourly.weather_code : [];
-      var precipMM = (data.hourly && data.hourly.precipitation) ? data.hourly.precipitation : [];
-
-      var start = findStartIndex(times);
-
-      for(var i = start; i < Math.min(start + SLOTS, times.length); i++){
-        var t = new Date(times[i]);
-        var label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
-        var pmm = Number((precipMM && precipMM[i] != null) ? precipMM[i] : 0);
-        var mini = "P " + (Math.round(pmm*10)/10).toFixed(1) + " mm";
-
-        var item = document.createElement("div");
-        item.className = "h-item";
-        item.innerHTML =
-          '<div class="h-time">' + label + '</div>' +
-          '<div class="h-ico">' + svgFor(code[i], 40) + '</div>' +
-          '<div class="h-temp">' + Math.round(Number(temp[i] || 0)) + '°</div>' +
-          '<div class="h-mini">' + mini + '</div>';
-
-        hourlyEl.appendChild(item);
-      }
-
-      var bars   = el("bars");
-      var labels = el("barLabels");
-      var banner = el("precipBanner");
-      var mode   = el("precipMode");
-      var nowLine = document.getElementById("nowLine");
-
-      bars.innerHTML = "";
-      labels.innerHTML = "";
-      mode.textContent = "mm";
-
-      var series = (Array.isArray(precipMM) && precipMM.length)
-        ? precipMM.map(function(v){ return Number(v || 0); })
-        : null;
-
-      if(!series){
-        banner.textContent = "PRECIP DATA NOT AVAILABLE";
-        if(nowLine) nowLine.style.display = "none";
-        return;
-      }
-
-      var slice = [];
-      for (var j = start; j < Math.min(start + SLOTS, times.length); j++) {
-        slice.push(Number(series[j] || 0));
-      }
-      while (slice.length < SLOTS) slice.push(0);
-
-      var max = 0;
-      for (var m = 0; m < slice.length; m++) {
-        var v = slice[m];
-        if (v >= DRY_THRESHOLD_MM && v > max) max = v;
-      }
-      if(max <= 0) max = DRY_THRESHOLD_MM;
-
-      var shownMax = 0;
-      for (var mm2 = 0; mm2 < slice.length; mm2++) {
-        if (slice[mm2] > shownMax) shownMax = slice[mm2];
-      }
-      banner.textContent = "MAX " + (Math.round(shownMax*10)/10).toFixed(1) + " MM (NEXT " + SLOTS + "H)";
-
-      var toAnimate = [];
-
-      for(var k=0; k<SLOTS; k++){
-        var rawVal = Number(slice[k] || 0);
-        var isTrace = rawVal < DRY_THRESHOLD_MM;
-
-        var targetH;
-        if(isTrace){
-          targetH = TRACE_HEIGHT_PX;
-        } else {
-          targetH = Math.max(10, Math.round((rawVal / max) * 120));
-          targetH = Math.min(140, targetH);
-        }
-
-        var b = document.createElement("div");
-        b.className = "bar";
-
-        if(isTrace){
-          b.classList.add("trace");
-          b.style.opacity = String(TRACE_OPACITY);
-        } else {
-          if(rawVal >= 3) b.classList.add("heavy");
-          else if(rawVal >= 1) b.classList.add("moderate");
-        }
-
-        b.style.height = "0px";
-        b.innerHTML = '<div class="bar-value">' + (isTrace ? "" : (Math.round(rawVal*10)/10).toFixed(1)) + '</div>';
-        bars.appendChild(b);
-
-        toAnimate.push({ el: b, h: targetH });
-
-        // 12-hour labels like "7:00am" (every other label)
-        var idx = start + k;
-        var lab = document.createElement("span");
-        if(idx < times.length){
-          var tt = new Date(times[idx]);
-          var hr = tt.getHours();
-          var ampm = hr >= 12 ? "pm" : "am";
-          hr = hr % 12; if(hr === 0) hr = 12;
-          lab.textContent = (k % 2 === 0) ? (hr + ":00" + ampm) : "";
-        } else {
-          lab.textContent = (k % 2 === 0) ? "--" : "";
-        }
-        labels.appendChild(lab);
-      }
-
-      if(nowLine) nowLine.style.display = "none";
-
-      setTimeout(function(){
-        for(var n=0; n<toAnimate.length; n++){
-          toAnimate[n].el.style.height = String(toAnimate[n].h) + "px";
-        }
-      }, 60);
-    }
-
     function renderForecast(data){
       var out = el("forecast");
       out.innerHTML = "";
@@ -1016,16 +767,130 @@
       }
     }
 
-    function loadWeather(){
-      var lat = LOCATION.lat, lon = LOCATION.lon, tz = LOCATION.tz, label = LOCATION.label;
-      el("placeLabel").textContent = label;
+    function renderHourly(data){
+      var hourlyEl = el("hourly");
+      hourlyEl.innerHTML = "";
 
+      var times = (data.hourly && data.hourly.time) ? data.hourly.time : [];
+      var temp  = (data.hourly && data.hourly.temperature_2m) ? data.hourly.temperature_2m : [];
+      var code  = (data.hourly && data.hourly.weather_code) ? data.hourly.weather_code : [];
+      var precipMM = (data.hourly && data.hourly.precipitation) ? data.hourly.precipitation : [];
+
+      var utcOffset = Number(data.utc_offset_seconds || 0);
+      var start = findStartIndex(times, utcOffset);
+
+      for(var i = start; i < Math.min(start + SLOTS, times.length); i++){
+        var t = new Date(times[i]); // Open-Meteo returns local timestamps for the chosen timezone
+        var label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+        var pmm = Number((precipMM && precipMM[i] != null) ? precipMM[i] : 0);
+        var mini = "P " + (Math.round(pmm*10)/10).toFixed(1) + " mm";
+
+        var item = document.createElement("div");
+        item.className = "h-item";
+        item.innerHTML =
+          '<div class="h-time">' + label + '</div>' +
+          '<div class="h-ico">' + svgFor(code[i], 40) + '</div>' +
+          '<div class="h-temp">' + Math.round(Number(temp[i] || 0)) + '°</div>' +
+          '<div class="h-mini">' + mini + '</div>';
+
+        hourlyEl.appendChild(item);
+      }
+
+      // Precip bars
+      var bars   = el("bars");
+      var labels = el("barLabels");
+      var banner = el("precipBanner");
+      var mode   = el("precipMode");
+      var nowLine = document.getElementById("nowLine");
+
+      bars.innerHTML = "";
+      labels.innerHTML = "";
+      mode.textContent = "mm";
+      if(nowLine) nowLine.style.display = "none"; // keep hidden
+
+      var series = (Array.isArray(precipMM) && precipMM.length)
+        ? precipMM.map(function(v){ return Number(v || 0); })
+        : null;
+
+      if(!series){
+        banner.textContent = "PRECIP DATA NOT AVAILABLE";
+        return;
+      }
+
+      var slice = [];
+      for (var j = start; j < Math.min(start + SLOTS, times.length); j++) slice.push(Number(series[j] || 0));
+      while (slice.length < SLOTS) slice.push(0);
+
+      var max = 0;
+      for (var m = 0; m < slice.length; m++){
+        var v = slice[m];
+        if (v >= DRY_THRESHOLD_MM && v > max) max = v;
+      }
+      if(max <= 0) max = DRY_THRESHOLD_MM;
+
+      var shownMax = 0;
+      for (var mm2 = 0; mm2 < slice.length; mm2++) if (slice[mm2] > shownMax) shownMax = slice[mm2];
+      banner.textContent = "MAX " + (Math.round(shownMax*10)/10).toFixed(1) + " MM (NEXT " + SLOTS + "H)";
+
+      var toAnimate = [];
+
+      for(var k=0; k<SLOTS; k++){
+        var rawVal = Number(slice[k] || 0);
+        var isTrace = rawVal < DRY_THRESHOLD_MM;
+
+        var targetH = isTrace
+          ? TRACE_HEIGHT_PX
+          : Math.min(140, Math.max(10, Math.round((rawVal / max) * 120)));
+
+        var b = document.createElement("div");
+        b.className = "bar";
+        if(isTrace){
+          b.classList.add("trace");
+          b.style.opacity = String(TRACE_OPACITY);
+        } else {
+          if(rawVal >= 3) b.classList.add("heavy");
+          else if(rawVal >= 1) b.classList.add("moderate");
+        }
+
+        b.style.height = "0px";
+        b.innerHTML = '<div class="bar-value">' + (isTrace ? "" : (Math.round(rawVal*10)/10).toFixed(1)) + '</div>';
+        bars.appendChild(b);
+        toAnimate.push({ el: b, h: targetH });
+
+        // 12-hour labels like "7:00am" (every other label)
+        var idx = start + k;
+        var lab = document.createElement("span");
+        if(idx < times.length){
+          var tt = new Date(times[idx]);
+          var hr = tt.getHours();
+          var ampm = hr >= 12 ? "pm" : "am";
+          hr = hr % 12; if(hr === 0) hr = 12;
+          lab.textContent = (k % 2 === 0) ? (hr + ":00" + ampm) : "";
+        } else {
+          lab.textContent = (k % 2 === 0) ? "--" : "";
+        }
+        labels.appendChild(lab);
+      }
+
+      setTimeout(function(){
+        for(var n=0; n<toAnimate.length; n++){
+          toAnimate[n].el.style.height = String(toAnimate[n].h) + "px";
+        }
+      }, 60);
+    }
+
+    function loadWeather(){
+      el("placeLabel").textContent = LOCATION.label;
+
+      // Use timezone=auto so the API resolves the correct local timezone from lat/lon :contentReference[oaicite:2]{index=2}
       var url =
-        "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+        "https://api.open-meteo.com/v1/forecast?latitude=" + encodeURIComponent(LOCATION.lat) +
+        "&longitude=" + encodeURIComponent(LOCATION.lon) +
         "&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,cloud_cover,uv_index,pressure_msl" +
         "&hourly=temperature_2m,weather_code,precipitation,precipitation_probability" +
         "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum" +
-        "&timezone=" + encodeURIComponent(tz);
+        "&timezone=auto";
 
       return fetch(url, {cache:"no-store"})
         .then(function(res){
@@ -1057,7 +922,6 @@
           renderForecast(data);
 
           el("status").textContent = "ONLINE";
-
           nextRefreshAt = Date.now() + REFRESH_MS;
           tickCountdown();
         });
@@ -1066,15 +930,13 @@
     function start(){
       try{
         document.documentElement.style.setProperty('--slots', String(SLOTS));
-        document.getElementById('slotCount').textContent = String(SLOTS);
+        el('slotCount').textContent = String(SLOTS);
 
-        tickClock();
-        setInterval(tickClock, 1000);
+        tickClock(); setInterval(tickClock, 1000);
+        tickCountdown(); setInterval(tickCountdown, 1000);
 
-        tickCountdown();
-        setInterval(tickCountdown, 1000);
-
-        initLocation()
+        // Try geo once, but always load weather (fallback is Bedford)
+        tryGeolocationOnce()
           .then(function(){ return loadWeather(); })
           .catch(showFatal);
 
