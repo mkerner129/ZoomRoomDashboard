@@ -262,7 +262,7 @@
             <h2>Markets</h2>
             <span class="pill" id="mktMeta">TradingView</span>
           </div>
-          <div class="tvNote">If this is blocked, your network is blocking TradingView embeds.</div>
+          <div class="tvNote">If a symbol shows “only available on TradingView”, swap to a TVC:* symbol.</div>
           <div class="tvWrap">
             <div id="tv_widget"></div>
           </div>
@@ -314,9 +314,6 @@
     </div>
   </div>
 
-  <!-- TradingView Widget Script -->
-  <script src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async></script>
-
   <script>
     // ==========================
     // CONFIG
@@ -325,11 +322,9 @@
     const REFRESH_MS = 4 * 60 * 1000;
     let nextRefreshAt = Date.now() + REFRESH_MS;
 
-    // If you have an RSS2JSON API key, paste it here.
-    // Leave as "" to attempt without a key (may work with limits).
+    // Paste your RSS2JSON key here
     const RSS2JSON_API_KEY = "";
 
-    // RSS feeds
     const FEEDS = {
       world: [
         { name:"BBC World", url:"https://feeds.bbci.co.uk/news/world/rss.xml" },
@@ -386,13 +381,11 @@
       const d = Math.floor(h/24);
       return d + "d ago";
     }
-
     async function fetchJson(url){
       const res = await fetch(url, { cache:"no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
       return await res.json();
     }
-
     function setEmpty(which, msg){
       const empty = $(which + "Empty");
       const list = $(which + "List");
@@ -404,7 +397,6 @@
         empty.style.display = "none";
       }
     }
-
     function renderList(listId, items, max){
       const ul = $(listId);
       ul.innerHTML = "";
@@ -423,12 +415,11 @@
         ul.appendChild(li);
       });
     }
-
     function setTicker(parts){
       const track = $("tickerTrack");
       const safe = parts.filter(Boolean);
       const html = safe.map(p => `<span>${escapeHtml(p)}</span>`).join(`<span class="tickSep"> • </span>`);
-      const fallback = `<span class="tickMuted">Ticker online • Weather OK • News pending</span>`;
+      const fallback = `<span class="tickMuted">Ticker online • Weather OK • News OK</span>`;
       track.innerHTML = (html || fallback) + `<span class="tickSep"> • </span>` + (html || fallback);
     }
 
@@ -452,13 +443,11 @@
       const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
       return dirs[Math.round(deg/22.5)%16];
     }
-
     async function loadWeather(){
       const url =
         "https://api.open-meteo.com/v1/forecast?latitude=" + LOCATION.lat + "&longitude=" + LOCATION.lon +
         "&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,weather_code,cloud_cover" +
         "&timezone=auto";
-
       const data = await fetchJson(url);
       const c = data.current;
 
@@ -481,7 +470,6 @@
       const base = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(feedUrl);
       return RSS2JSON_API_KEY ? (base + "&api_key=" + encodeURIComponent(RSS2JSON_API_KEY)) : base;
     }
-
     async function loadFeeds(feedList){
       const groups = [];
       for(const f of feedList){
@@ -500,7 +488,6 @@
       }
       return groups;
     }
-
     function mergeAndSort(groups){
       const all = [];
       groups.forEach(g => g.items.forEach(x => all.push(x)));
@@ -517,17 +504,16 @@
     }
 
     // ==========================
-    // MARKETS (TradingView)
+    // MARKETS (TradingView) - fixed symbols
     // ==========================
     function initTradingView(){
-      // Wait a moment for the async TradingView script to load
-      const triesMax = 50;
-      let tries = 0;
+      const mount = $("tv_widget");
+      mount.innerHTML = "";
 
       const payload = {
         "symbols": [
-          ["S&P 500","SP:SPX|1D"],
-          ["Dow Jones","DJ:DJI|1D"],
+          ["S&P 500","TVC:SPX|1D"],
+          ["Dow Jones","TVC:DJI|1D"],
           ["Nasdaq 100","NASDAQ:NDX|1D"],
           ["TSX","TSX:TSX|1D"]
         ],
@@ -550,50 +536,15 @@
         "valuesTracking": "1",
         "changeMode": "price-and-percent",
         "chartType": "area",
-        "maLineColor": "#8a2be2",
-        "maLineWidth": 1,
-        "maLength": 9,
-        "headerFontSize": "13",
-        "lineWidth": 2,
-        "lineType": 0,
-        "dateRanges": [
-          "1D|1","1M|30","3M|60","12M|1D"
-        ]
+        "dateRanges": ["1D|1","1M|30","3M|60","12M|1D"]
       };
 
-      const mount = $("tv_widget");
-
-      function tryRender(){
-        tries++;
-        // TradingView embed script creates window.TradingView via internal loader,
-        // but on some networks it can be blocked. We'll attempt to inject the widget config.
-        try{
-          // The external-embedding widgets read JSON from the script tag's innerHTML
-          // We can create that script tag ourselves inside the container.
-          mount.innerHTML = "";
-          const s = document.createElement("script");
-          s.type = "text/javascript";
-          s.async = true;
-          s.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
-          s.text = JSON.stringify(payload);
-          mount.appendChild(s);
-          return true;
-        }catch(e){
-          return false;
-        }
-      }
-
-      // Try a few times; if it never loads, show a message.
-      const iv = setInterval(() => {
-        const ok = tryRender();
-        if(ok || tries >= triesMax){
-          clearInterval(iv);
-          if(tries >= triesMax){
-            mount.innerHTML =
-              '<div class="empty" style="margin:12px;">Markets widget blocked by network policy.</div>';
-          }
-        }
-      }, 200);
+      const s = document.createElement("script");
+      s.type = "text/javascript";
+      s.async = true;
+      s.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
+      s.text = JSON.stringify(payload);
+      mount.appendChild(s);
     }
 
     // ==========================
@@ -603,14 +554,12 @@
       const started = Date.now();
       $("updated").textContent = "UPDATING…";
 
-      // Weather first (known working for you)
       await loadWeather().catch(() => {
         $("wxMeta").textContent = "NO DATA";
         $("wxDesc").textContent = "UNAVAILABLE";
         setEmpty("wx", "Weather failed to load.");
       });
 
-      // News via RSS2JSON
       const [worldGroups, localGroups] = await Promise.all([
         loadFeeds(FEEDS.world),
         loadFeeds(FEEDS.local)
@@ -625,11 +574,7 @@
         renderList("worldList", world, 10);
       } else {
         $("worldMeta").textContent = "NO DATA";
-        setEmpty("world",
-          "World news failed.\n" +
-          (RSS2JSON_API_KEY ? "RSS2JSON may be rate-limiting or blocked." :
-           "Try adding an RSS2JSON API key (free) to improve reliability.")
-        );
+        setEmpty("world", "World news failed. Check RSS2JSON key / rate limits.");
       }
 
       if(local.length){
@@ -643,20 +588,15 @@
       } else {
         $("localMeta").textContent = "NO DATA";
         $("mixMeta").textContent = "NO DATA";
-        setEmpty("local",
-          "Local news failed.\n" +
-          (RSS2JSON_API_KEY ? "RSS2JSON may be rate-limiting or blocked." :
-           "Try adding an RSS2JSON API key (free) to improve reliability.")
-        );
+        setEmpty("local", "Local news failed. Check RSS2JSON key / rate limits.");
         setEmpty("mix", "Local news failed (see Local panel).");
       }
 
-      // Ticker never empty: use top headlines + weather
       const tickerParts = [];
       tickerParts.push("WORLD: " + (world[0]?.title || "—"));
       tickerParts.push("LOCAL: " + (local[0]?.title || "—"));
       tickerParts.push("WEATHER: " + ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°");
-      tickerParts.push("MARKETS: SEE PANEL");
+      tickerParts.push("MARKETS: SPX • DJI • NDX • TSX");
       setTicker(tickerParts);
 
       const took = Math.max(1, Math.round((Date.now() - started)/1000));
