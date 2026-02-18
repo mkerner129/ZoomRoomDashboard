@@ -144,33 +144,25 @@
       height: 260px; min-height:260px;
     }
     .miniCard .card-inner{ height:100%; display:flex; flex-direction:column; gap:12px; }
-    .marketGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; flex:1 1 auto; }
-    .quote{
-      border-radius:18px; border:1px solid rgba(255,255,255,.16);
+
+    .tvWrap{
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.16);
       background: rgba(0,0,0,.14);
-      padding:10px 12px; box-shadow: 0 10px 18px rgba(0,0,0,.22);
-      display:flex; flex-direction:column; gap:6px;
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      flex: 1 1 auto;
+      min-height: 0;
+      position:relative;
     }
-    .qSym{
-      color:var(--muted); font-size:11px; font-weight:1000;
-      letter-spacing:.7px; text-transform:uppercase;
-      display:flex; justify-content:space-between; gap:10px;
+    .tvWrap > div{ height:100%; }
+    .tvNote{
+      color:var(--muted);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.5px;
+      text-transform:uppercase;
     }
-    .qVal{
-      display:flex; justify-content:space-between; align-items:baseline; gap:10px;
-      font-variant-numeric: tabular-nums;
-    }
-    .qPrice{ font-weight:1000; font-size:20px; letter-spacing:-.2px; color:#fff; }
-    .qChg{
-      font-weight:1000; font-size:13px; letter-spacing:.4px;
-      padding:4px 10px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      text-transform:uppercase; white-space:nowrap;
-    }
-    .up{ color:#b8ffdb; }
-    .dn{ color:#ffb8c3; }
-    .flat{ color:var(--muted); }
 
     .wxHero{
       border-radius:22px; border:1px solid rgba(255,255,255,.16);
@@ -267,12 +259,12 @@
       <div class="card">
         <div class="card-inner">
           <div class="cardHead">
-            <h2>More Local</h2>
-            <span class="pill" id="mixMeta">—</span>
+            <h2>Markets</h2>
+            <span class="pill" id="mktMeta">TradingView</span>
           </div>
-          <div class="panel" style="height: calc(100% - 40px);">
-            <ul class="list" id="mixList"></ul>
-            <div class="empty" id="mixEmpty" style="display:none;"></div>
+          <div class="tvNote">If this is blocked, your network is blocking TradingView embeds.</div>
+          <div class="tvWrap">
+            <div id="tv_widget"></div>
           </div>
         </div>
       </div>
@@ -281,10 +273,13 @@
         <div class="card miniCard">
           <div class="card-inner">
             <div class="cardHead">
-              <h2>Markets</h2>
-              <span class="pill" id="mktMeta">—</span>
+              <h2>Top Local</h2>
+              <span class="pill" id="mixMeta">—</span>
             </div>
-            <div class="marketGrid" id="marketGrid"></div>
+            <div class="panel" style="height: calc(100% - 40px);">
+              <ul class="list" id="mixList"></ul>
+              <div class="empty" id="mixEmpty" style="display:none;"></div>
+            </div>
           </div>
         </div>
 
@@ -319,6 +314,9 @@
     </div>
   </div>
 
+  <!-- TradingView Widget Script -->
+  <script src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async></script>
+
   <script>
     // ==========================
     // CONFIG
@@ -327,10 +325,11 @@
     const REFRESH_MS = 4 * 60 * 1000;
     let nextRefreshAt = Date.now() + REFRESH_MS;
 
-    // RSS proxy (no-key). Sometimes blocked; we show a clear message if so.
-    const RSS_PROXY = (url) => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+    // If you have an RSS2JSON API key, paste it here.
+    // Leave as "" to attempt without a key (may work with limits).
+    const RSS2JSON_API_KEY = "";
 
-    // Feeds (safe defaults; tweak anytime)
+    // RSS feeds
     const FEEDS = {
       world: [
         { name:"BBC World", url:"https://feeds.bbci.co.uk/news/world/rss.xml" },
@@ -339,18 +338,6 @@
       local: [
         { name:"CBC Nova Scotia", url:"https://rss.cbc.ca/lineup/canada-novascotia.xml" },
         { name:"Global Halifax",  url:"https://globalnews.ca/halifax/feed/" }
-      ]
-    };
-
-    // Markets from Yahoo quote API (often less CORS pain than CSV sites).
-    // If blocked, we show "Unavailable" but the rest works.
-    const YAHOO = {
-      base: "https://query1.finance.yahoo.com/v7/finance/quote?symbols=",
-      symbols: [
-        { label:"S&P 500", sym:"^GSPC" },
-        { label:"Dow",     sym:"^DJI" },
-        { label:"Nasdaq",  sym:"^IXIC" },
-        { label:"TSX",     sym:"^GSPTSE" }
       ]
     };
 
@@ -371,7 +358,8 @@
     }
     function tickClock(){
       const d = new Date();
-      $("clock").childNodes[0].textContent = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + "\n      ";
+      $("clock").childNodes[0].textContent =
+        String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + "\n      ";
       $("clockDate").textContent = fmtDateLine(d);
     }
     function tickCountdown(){
@@ -383,11 +371,8 @@
     }
     function escapeHtml(str){
       return String(str ?? "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
     }
     function timeAgo(iso){
       const t = Date.parse(iso || "");
@@ -401,11 +386,7 @@
       const d = Math.floor(h/24);
       return d + "d ago";
     }
-    async function fetchText(url){
-      const res = await fetch(url, { cache:"no-store" });
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      return await res.text();
-    }
+
     async function fetchJson(url){
       const res = await fetch(url, { cache:"no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
@@ -443,39 +424,12 @@
       });
     }
 
-    function parseRSS(xmlText){
-      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-      const items = Array.from(doc.querySelectorAll("item")).slice(0, 30).map(it => {
-        const title = (it.querySelector("title")?.textContent || "").trim();
-        const link  = (it.querySelector("link")?.textContent || "").trim();
-        const pub   = (it.querySelector("pubDate")?.textContent || it.querySelector("dc\\:date")?.textContent || "").trim();
-        return { title, link, pubDate: pub };
-      }).filter(x => x.title);
-      return items;
-    }
-
-    function mergeAndSort(groups){
-      const all = [];
-      groups.forEach(g => g.items.forEach(x => all.push({ ...x, source: g.name })));
-      all.sort((a,b) => (Date.parse(b.pubDate||"")||0) - (Date.parse(a.pubDate||"")||0));
-      const seen = new Set();
-      const out = [];
-      for(const x of all){
-        const key = x.title.toLowerCase();
-        if(seen.has(key)) continue;
-        seen.add(key);
-        out.push(x);
-      }
-      return out;
-    }
-
     function setTicker(parts){
       const track = $("tickerTrack");
       const safe = parts.filter(Boolean);
       const html = safe.map(p => `<span>${escapeHtml(p)}</span>`).join(`<span class="tickSep"> • </span>`);
-      track.innerHTML = (html || `<span class="tickMuted">No ticker data available</span>`) +
-                        `<span class="tickSep"> • </span>` +
-                        (html || `<span class="tickMuted">No ticker data available</span>`);
+      const fallback = `<span class="tickMuted">Ticker online • Weather OK • News pending</span>`;
+      track.innerHTML = (html || fallback) + `<span class="tickSep"> • </span>` + (html || fallback);
     }
 
     // ==========================
@@ -521,78 +475,125 @@
     }
 
     // ==========================
-    // NEWS (RSS via AllOrigins)
+    // NEWS (RSS2JSON)
     // ==========================
-    async function loadFeedGroup(feedList){
-      const out = [];
+    function rss2jsonUrl(feedUrl){
+      const base = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(feedUrl);
+      return RSS2JSON_API_KEY ? (base + "&api_key=" + encodeURIComponent(RSS2JSON_API_KEY)) : base;
+    }
+
+    async function loadFeeds(feedList){
+      const groups = [];
       for(const f of feedList){
         try{
-          const xml = await fetchText(RSS_PROXY(f.url));
-          const items = parseRSS(xml);
-          out.push({ name: f.name, items });
+          const data = await fetchJson(rss2jsonUrl(f.url));
+          const items = (data.items || []).map(it => ({
+            title: it.title,
+            link: it.link,
+            pubDate: it.pubDate || it.published || "",
+            source: f.name
+          })).filter(x => x.title);
+          groups.push({ name:f.name, items });
         }catch(e){
-          out.push({ name: f.name, items: [] });
+          groups.push({ name:f.name, items: [] });
         }
+      }
+      return groups;
+    }
+
+    function mergeAndSort(groups){
+      const all = [];
+      groups.forEach(g => g.items.forEach(x => all.push(x)));
+      all.sort((a,b) => (Date.parse(b.pubDate||"")||0) - (Date.parse(a.pubDate||"")||0));
+      const seen = new Set();
+      const out = [];
+      for(const x of all){
+        const key = (x.title||"").toLowerCase();
+        if(!key || seen.has(key)) continue;
+        seen.add(key);
+        out.push(x);
       }
       return out;
     }
 
     // ==========================
-    // MARKETS (Yahoo quote endpoint)
+    // MARKETS (TradingView)
     // ==========================
-    async function loadMarkets(){
-      const grid = $("marketGrid");
-      grid.innerHTML = "";
-      $("mktMeta").textContent = "UPDATING…";
+    function initTradingView(){
+      // Wait a moment for the async TradingView script to load
+      const triesMax = 50;
+      let tries = 0;
 
-      const symbols = YAHOO.symbols.map(x => x.sym).join(",");
-      try{
-        const data = await fetchJson(YAHOO.base + encodeURIComponent(symbols));
-        const quotes = (data && data.quoteResponse && data.quoteResponse.result) ? data.quoteResponse.result : [];
+      const payload = {
+        "symbols": [
+          ["S&P 500","SP:SPX|1D"],
+          ["Dow Jones","DJ:DJI|1D"],
+          ["Nasdaq 100","NASDAQ:NDX|1D"],
+          ["TSX","TSX:TSX|1D"]
+        ],
+        "chartOnly": false,
+        "width": "100%",
+        "height": "100%",
+        "locale": "en",
+        "colorTheme": "dark",
+        "autosize": true,
+        "showVolume": false,
+        "showMA": false,
+        "hideDateRanges": false,
+        "hideMarketStatus": false,
+        "hideSymbolLogo": false,
+        "scalePosition": "right",
+        "scaleMode": "Normal",
+        "fontFamily": "-apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif",
+        "fontSize": "12",
+        "noTimeScale": false,
+        "valuesTracking": "1",
+        "changeMode": "price-and-percent",
+        "chartType": "area",
+        "maLineColor": "#8a2be2",
+        "maLineWidth": 1,
+        "maLength": 9,
+        "headerFontSize": "13",
+        "lineWidth": 2,
+        "lineType": 0,
+        "dateRanges": [
+          "1D|1","1M|30","3M|60","12M|1D"
+        ]
+      };
 
-        const tickerParts = [];
-        for(const m of YAHOO.symbols){
-          const q = quotes.find(z => z.symbol === m.sym);
-          const price = q && isFinite(q.regularMarketPrice) ? Number(q.regularMarketPrice) : NaN;
-          const chg = q && isFinite(q.regularMarketChange) ? Number(q.regularMarketChange) : NaN;
-          const pct = q && isFinite(q.regularMarketChangePercent) ? Number(q.regularMarketChangePercent) : NaN;
+      const mount = $("tv_widget");
 
-          const cls = !isFinite(chg) ? "flat" : (chg > 0 ? "up" : (chg < 0 ? "dn" : "flat"));
-          const chgText = !isFinite(chg) ? "—" : ((chg > 0 ? "+" : "") + chg.toFixed(2) + " (" + (pct>0?"+":"") + pct.toFixed(2) + "%)");
-
-          const box = document.createElement("div");
-          box.className = "quote";
-          box.innerHTML = `
-            <div class="qSym"><span>${escapeHtml(m.label)}</span><span class="tickMuted">${escapeHtml(m.sym)}</span></div>
-            <div class="qVal">
-              <div class="qPrice">${isFinite(price) ? price.toFixed(2) : "—"}</div>
-              <div class="qChg ${cls}">${escapeHtml(chgText)}</div>
-            </div>
-          `;
-          grid.appendChild(box);
-
-          tickerParts.push(m.label + " " + (isFinite(price)?price.toFixed(2):"—") + " " + (isFinite(pct)?((pct>0?"+":"")+pct.toFixed(2)+"%"):""));
+      function tryRender(){
+        tries++;
+        // TradingView embed script creates window.TradingView via internal loader,
+        // but on some networks it can be blocked. We'll attempt to inject the widget config.
+        try{
+          // The external-embedding widgets read JSON from the script tag's innerHTML
+          // We can create that script tag ourselves inside the container.
+          mount.innerHTML = "";
+          const s = document.createElement("script");
+          s.type = "text/javascript";
+          s.async = true;
+          s.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
+          s.text = JSON.stringify(payload);
+          mount.appendChild(s);
+          return true;
+        }catch(e){
+          return false;
         }
-
-        $("mktMeta").textContent = "UPDATED";
-        return tickerParts;
-      }catch(e){
-        // render placeholders
-        for(const m of YAHOO.symbols){
-          const box = document.createElement("div");
-          box.className = "quote";
-          box.innerHTML = `
-            <div class="qSym"><span>${escapeHtml(m.label)}</span><span class="tickMuted">${escapeHtml(m.sym)}</span></div>
-            <div class="qVal">
-              <div class="qPrice">—</div>
-              <div class="qChg flat">UNAVAILABLE</div>
-            </div>
-          `;
-          grid.appendChild(box);
-        }
-        $("mktMeta").textContent = "NO DATA";
-        return [];
       }
+
+      // Try a few times; if it never loads, show a message.
+      const iv = setInterval(() => {
+        const ok = tryRender();
+        if(ok || tries >= triesMax){
+          clearInterval(iv);
+          if(tries >= triesMax){
+            mount.innerHTML =
+              '<div class="empty" style="margin:12px;">Markets widget blocked by network policy.</div>';
+          }
+        }
+      }, 200);
     }
 
     // ==========================
@@ -602,21 +603,21 @@
       const started = Date.now();
       $("updated").textContent = "UPDATING…";
 
-      // Weather first (known-good)
+      // Weather first (known working for you)
       await loadWeather().catch(() => {
         $("wxMeta").textContent = "NO DATA";
         $("wxDesc").textContent = "UNAVAILABLE";
         setEmpty("wx", "Weather failed to load.");
       });
 
-      // News
-      const [worldSrc, localSrc] = await Promise.all([
-        loadFeedGroup(FEEDS.world),
-        loadFeedGroup(FEEDS.local)
+      // News via RSS2JSON
+      const [worldGroups, localGroups] = await Promise.all([
+        loadFeeds(FEEDS.world),
+        loadFeeds(FEEDS.local)
       ]);
 
-      const world = mergeAndSort(worldSrc);
-      const local = mergeAndSort(localSrc);
+      const world = mergeAndSort(worldGroups);
+      const local = mergeAndSort(localGroups);
 
       if(world.length){
         $("worldMeta").textContent = world.length + " ITEMS";
@@ -624,7 +625,11 @@
         renderList("worldList", world, 10);
       } else {
         $("worldMeta").textContent = "NO DATA";
-        setEmpty("world", "World news blocked.\nLikely: AllOrigins or RSS fetch blocked by your network.\nIf you want 'always works', we should use RSS2JSON with a key or host a tiny proxy.");
+        setEmpty("world",
+          "World news failed.\n" +
+          (RSS2JSON_API_KEY ? "RSS2JSON may be rate-limiting or blocked." :
+           "Try adding an RSS2JSON API key (free) to improve reliability.")
+        );
       }
 
       if(local.length){
@@ -638,20 +643,20 @@
       } else {
         $("localMeta").textContent = "NO DATA";
         $("mixMeta").textContent = "NO DATA";
-        setEmpty("local", "Local news blocked.\nWe can swap feeds or use RSS2JSON/proxy.");
-        setEmpty("mix", "Local news blocked.\nWe can swap feeds or use RSS2JSON/proxy.");
+        setEmpty("local",
+          "Local news failed.\n" +
+          (RSS2JSON_API_KEY ? "RSS2JSON may be rate-limiting or blocked." :
+           "Try adding an RSS2JSON API key (free) to improve reliability.")
+        );
+        setEmpty("mix", "Local news failed (see Local panel).");
       }
 
-      // Markets
-      const mktParts = await loadMarkets();
-
-      // Ticker (never empty)
+      // Ticker never empty: use top headlines + weather
       const tickerParts = [];
       tickerParts.push("WORLD: " + (world[0]?.title || "—"));
       tickerParts.push("LOCAL: " + (local[0]?.title || "—"));
-      if(mktParts.length) mktParts.forEach(p => tickerParts.push("MKT: " + p));
-      else tickerParts.push("MKT: UNAVAILABLE");
       tickerParts.push("WEATHER: " + ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°");
+      tickerParts.push("MARKETS: SEE PANEL");
       setTicker(tickerParts);
 
       const took = Math.max(1, Math.round((Date.now() - started)/1000));
@@ -666,6 +671,8 @@
 
       tickClock(); setInterval(tickClock, 1000);
       tickCountdown(); setInterval(tickCountdown, 1000);
+
+      initTradingView();
 
       refreshAll().catch(()=>{ $("updated").textContent = "UPDATE FAILED"; });
       setInterval(()=>{ refreshAll().catch(()=>{}); }, REFRESH_MS);
