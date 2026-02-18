@@ -11,7 +11,7 @@
       --border: rgba(255,255,255,.14);
       --shadow: 0 18px 44px rgba(0,0,0,.45);
       --shadow2: 0 10px 22px rgba(0,0,0,.35);
-      --tileRadius: 18px; --cardRadius: 26px;
+      --cardRadius: 26px;
       --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
       --slots: 12;
     }
@@ -54,31 +54,22 @@
       z-index:2;
     }
 
-    /* Left header area */
     .brand{
       display:flex;
       align-items:flex-end;
-      gap:14px;
-      min-width: 0;
-      flex: 1 1 auto;        /* allows centering across the full left side */
-    }
-
-    /* Wrapper for place + pills */
-    .brand-content{
       min-width:0;
-      width:100%;
+      flex: 1 1 auto;
     }
+    .brand-content{min-width:0;width:100%;}
 
-    /* BIG location line (centered) */
     .place{
       font-size:34px;
       font-weight:1000;
       letter-spacing:-.6px;
       line-height:1.05;
-      text-transform:none;
       color:#fff;
       text-shadow: 0 10px 24px rgba(0,0,0,.35);
-      text-align:center;     /* ✅ center the city text */
+      text-align:center;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
@@ -96,7 +87,7 @@
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
-      justify-content:center; /* center pills row to match */
+      justify-content:center;
     }
 
     .pill{
@@ -106,6 +97,12 @@
       backdrop-filter: blur(10px);
       font-size:12px;color:var(--muted);font-weight:800;
       letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;
+    }
+    /* Make the LOC pill a touch more readable */
+    #locMode{
+      color:#fff;
+      border-color: rgba(255,255,255,.22);
+      background: rgba(0,0,0,.18);
     }
 
     .clock{
@@ -397,7 +394,7 @@
         <div class="subtitle">
           <span class="pill" id="wxUpdated">Updating…</span>
           <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
-          <span class="pill" id="locMode">LOC: —</span>
+          <span class="pill" id="locMode">LOCATING…</span>
         </div>
       </div>
     </div>
@@ -553,6 +550,11 @@
       el("refreshIn").textContent = String(m).padStart(2,'0') + ":" + String(r).padStart(2,'0');
     }
 
+    function setLocPill(text){
+      var n = document.getElementById("locMode");
+      if(n) n.textContent = text;
+    }
+
     function applyQueryLocation(){
       try{
         var q = new URLSearchParams(location.search || "");
@@ -561,39 +563,66 @@
           LOCATION.lat = Number(lat);
           LOCATION.lon = Number(lon);
           if(label) LOCATION.label = String(label);
-          el("locMode").textContent = "LOC: URL";
+          setLocPill("LOC: URL");
           return true;
         }
       }catch(e){}
       return false;
     }
 
+    // IP-based geolocation (no permission prompt).
+    // NOTE: Some signage environments block third-party geo endpoints.
     function ipGeolocate(){
-      el("status").textContent = "LOCATING (IP)…";
-      return fetch("https://ipapi.co/json/", { cache: "no-store" })
-        .then(function(res){
-          if(!res.ok) throw new Error("IP geo failed");
-          return res.json();
-        })
-        .then(function(j){
-          if(j && isFinite(Number(j.latitude)) && isFinite(Number(j.longitude))){
-            LOCATION.lat = Number(j.latitude);
-            LOCATION.lon = Number(j.longitude);
+      setLocPill("LOC: IP (LOOKUP…)");
 
-            var parts = [];
-            if(j.city) parts.push(j.city);
-            if(j.region) parts.push(j.region);
-            if(j.country_name) parts.push(j.country_name);
-            if(parts.length) LOCATION.label = parts.join(", ");
+      var endpoints = [
+        "https://ipapi.co/json/",
+        "https://ipwho.is/"
+      ];
 
-            el("locMode").textContent = "LOC: IP";
-            return true;
-          }
-          return false;
-        })
-        .catch(function(){ return false; });
+      function tryOne(i){
+        if(i >= endpoints.length) return Promise.resolve(false);
+        return fetch(endpoints[i], { cache:"no-store" })
+          .then(function(res){
+            if(!res.ok) throw new Error("geo http fail");
+            return res.json();
+          })
+          .then(function(j){
+            // ipapi.co format
+            if(j && isFinite(Number(j.latitude)) && isFinite(Number(j.longitude))){
+              LOCATION.lat = Number(j.latitude);
+              LOCATION.lon = Number(j.longitude);
+              var parts = [];
+              if(j.city) parts.push(j.city);
+              if(j.region) parts.push(j.region);
+              if(j.country_name) parts.push(j.country_name);
+              if(parts.length) LOCATION.label = parts.join(", ");
+              setLocPill("LOC: IP");
+              return true;
+            }
+            // ipwho.is format
+            if(j && j.success !== false && isFinite(Number(j.latitude)) && isFinite(Number(j.longitude))){
+              LOCATION.lat = Number(j.latitude);
+              LOCATION.lon = Number(j.longitude);
+              var parts2 = [];
+              if(j.city) parts2.push(j.city);
+              if(j.region) parts2.push(j.region);
+              if(j.country) parts2.push(j.country);
+              if(parts2.length) LOCATION.label = parts2.join(", ");
+              setLocPill("LOC: IP");
+              return true;
+            }
+            return false;
+          })
+          .catch(function(){
+            return tryOne(i+1);
+          });
+      }
+
+      return tryOne(0);
     }
 
+    // Build YYYY-MM-DDTHH key in Open-Meteo's timezone (using utc_offset_seconds)
     function nowKeyForOffset(utcOffsetSeconds){
       var ms = Date.now() + Number(utcOffsetSeconds || 0) * 1000;
       var d = new Date(ms);
@@ -810,7 +839,6 @@
       for(var i = start; i < Math.min(start + SLOTS, times.length); i++){
         var t = new Date(times[i]);
         var label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
         var pmm = Number((precipMM && precipMM[i] != null) ? precipMM[i] : 0);
         var mini = "P " + (Math.round(pmm*10)/10).toFixed(1) + " mm";
 
@@ -961,7 +989,12 @@
         tickClock(); setInterval(tickClock, 1000);
         tickCountdown(); setInterval(tickCountdown, 1000);
 
-        el("locMode").textContent = "LOC: —";
+        // Location resolution order:
+        // 1) URL query (?lat=..&lon=..)
+        // 2) IP geo (may be blocked in signage)
+        // 3) Bedford fallback
+        setLocPill("LOCATING…");
+
         var usedUrl = applyQueryLocation();
         if(usedUrl){
           el("status").textContent = "USING URL LOCATION";
@@ -971,11 +1004,19 @@
           ipGeolocate().then(function(ok){
             if(!ok){
               LOCATION.lat = FALLBACK.lat; LOCATION.lon = FALLBACK.lon; LOCATION.label = FALLBACK.label;
-              el("locMode").textContent = "LOC: FALLBACK";
+              setLocPill("LOC: FALLBACK");
+              el("status").textContent = "IP GEO BLOCKED (USING FALLBACK)";
+            } else {
+              el("status").textContent = "USING IP LOCATION";
             }
             el("placeLabel").textContent = LOCATION.label;
             return loadWeather();
-          }).catch(showFatal);
+          }).catch(function(e){
+            LOCATION.lat = FALLBACK.lat; LOCATION.lon = FALLBACK.lon; LOCATION.label = FALLBACK.label;
+            setLocPill("LOC: FALLBACK");
+            el("status").textContent = "IP GEO ERROR (USING FALLBACK)";
+            return loadWeather().catch(showFatal);
+          });
         }
 
         setInterval(function(){ loadWeather().catch(function(){}); }, REFRESH_MS);
