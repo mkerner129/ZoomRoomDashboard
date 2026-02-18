@@ -10,9 +10,13 @@
       --text:#eaf2ff; --muted:#b9d1ff; --border: rgba(255,255,255,.14);
       --shadow: 0 18px 44px rgba(0,0,0,.45);
       --shadow2: 0 10px 22px rgba(0,0,0,.35);
-      --radius: 26px; --gap: 16px;
+
+      --radius: 26px;
+      --gap: 16px;
+
       --tickerH: 64px;
       --breakingH: 56px;
+
       --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
 
       --accent1: rgba(54,194,255,.95);
@@ -35,10 +39,7 @@
 
     .sheen{
       position:absolute; inset:-60% -60%;
-      background: linear-gradient(120deg,
-        transparent 35%,
-        rgba(255,255,255,.08) 45%,
-        transparent 55%);
+      background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.08) 45%, transparent 55%);
       transform: rotate(8deg);
       animation: sweep 14s linear infinite;
       pointer-events:none;
@@ -50,15 +51,13 @@
       100%{transform: translateX(22%) rotate(8deg)}
     }
 
-    /* ====== TOP BAR ====== */
+    /* ===== TOP BAR ===== */
     header{
-      position:relative; z-index:3;
+      position:relative; z-index:4;
       padding:18px 22px 10px;
       display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:end;
     }
-    .brand{
-      display:flex; flex-direction:column; gap:10px;
-    }
+    .brand{display:flex; flex-direction:column; gap:10px;}
     .title{
       font-weight:1100; letter-spacing:-.8px; font-size:32px; line-height:1;
       text-transform:uppercase;
@@ -87,12 +86,12 @@
       font-size:12px; font-weight:900; letter-spacing:.7px;
     }
 
-    /* ====== BREAKING BAR ====== */
+    /* ===== BREAKING BAR ===== */
     .breaking{
       position:absolute; left:0; right:0;
-      top:86px; /* just below header */
+      top:86px;
       height: var(--breakingH);
-      z-index:4;
+      z-index:6;
       display:none;
       align-items:center;
       border-top:1px solid rgba(255,255,255,.12);
@@ -104,12 +103,9 @@
     }
     .breaking.on{display:flex}
     .breakingTag{
-      min-width: 182px;
-      height:100%;
+      min-width: 182px; height:100%;
       display:flex; align-items:center; justify-content:center;
-      font-weight:1100;
-      letter-spacing:1.3px;
-      text-transform:uppercase;
+      font-weight:1100; letter-spacing:1.3px; text-transform:uppercase;
       background: rgba(0,0,0,.22);
       border-right:1px solid rgba(255,255,255,.18);
     }
@@ -130,20 +126,18 @@
     .breakingSep{opacity:.45}
     @keyframes scroll{ 0%{transform:translateX(0)} 100%{transform:translateX(-100%)} }
 
-    /* ====== MAIN LAYOUT ====== */
+    /* ===== MAIN ===== */
     main{
-      position:relative; z-index:2;
+      position:relative; z-index:3;
       padding:0 22px 16px;
       height: calc(100% - 86px - var(--tickerH));
       display:grid;
       grid-template-columns: 1.55fr .95fr;
       gap: var(--gap);
       min-height:0;
-      margin-top: calc(var(--breakingH) + 10px); /* room for breaking bar even when hidden */
+      margin-top: calc(var(--breakingH) + 10px);
     }
-    .breaking:not(.on) ~ main{
-      margin-top: 0;
-    }
+    .breaking:not(.on) ~ main{ margin-top: 0; }
 
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
@@ -156,7 +150,7 @@
     }
     .card-inner{ padding:16px; min-height:0; height:100%; }
 
-    /* Left column: Hero + lists */
+    /* LEFT COLUMN */
     .leftCol{
       display:grid;
       grid-template-rows: 1.05fr .95fr;
@@ -165,7 +159,6 @@
       min-height:0;
     }
 
-    /* Hero panel */
     .hero{
       position:relative;
       border-radius:22px;
@@ -177,11 +170,12 @@
       box-shadow: var(--shadow2);
       overflow:hidden;
       display:grid;
-      grid-template-columns: 1.25fr .75fr;
+      grid-template-columns: 1.15fr .85fr; /* room for Now/Next rail */
       gap:12px;
       height:100%;
       min-height:0;
     }
+
     .heroMedia{
       position:relative;
       border-right:1px solid rgba(255,255,255,.10);
@@ -195,15 +189,15 @@
       position:absolute; inset:0;
       width:100%; height:100%;
       object-fit:cover;
-      opacity:.88;
+      opacity:.9;
       transform: scale(1.03);
       filter: contrast(1.05) saturate(1.05);
     }
     .heroOverlay{
       position:absolute; inset:0;
       background:
-        linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,.10) 55%, rgba(0,0,0,.35)),
-        linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.65));
+        linear-gradient(90deg, rgba(0,0,0,.58), rgba(0,0,0,.08) 55%, rgba(0,0,0,.38)),
+        linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.68));
     }
     .heroBug{
       position:absolute; top:14px; left:14px;
@@ -222,14 +216,35 @@
       background: linear-gradient(135deg, var(--accent1), var(--accent2));
       box-shadow: 0 0 14px rgba(54,194,255,.35);
     }
-    .heroText{
+
+    .heroRight{
       padding:16px 16px 14px;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      gap:10px;
+      display:grid;
+      grid-template-rows: auto 1fr;
+      gap:12px;
       min-height:0;
     }
+
+    .heroKicker{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+    .badge{
+      display:inline-flex; align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      font-weight:1000;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+      font-size:11px;
+      color:#fff;
+      white-space:nowrap;
+    }
+    .badge.breaking{
+      background: linear-gradient(135deg, rgba(255,64,64,.92), rgba(255,176,32,.75));
+      border-color: rgba(255,255,255,.18);
+      box-shadow: 0 0 22px rgba(255,64,64,.22);
+    }
+
     .heroTitle{
       font-weight:1100;
       font-size:34px;
@@ -239,6 +254,7 @@
       text-shadow: 0 14px 26px rgba(0,0,0,.35);
       overflow:hidden;
       display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;
+      margin-top:10px;
     }
     .heroDeck{
       margin-top:10px;
@@ -265,29 +281,74 @@
       text-transform:uppercase;
     }
     .heroMeta a{color:inherit; text-decoration:none}
-    .heroKicker{
-      display:flex; gap:8px; align-items:center;
-    }
-    .badge{
-      display:inline-flex; align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.16);
+    .heroMeta a:hover{ text-decoration:underline; }
+
+    /* NOW/NEXT rail */
+    .rail{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);
       background: rgba(0,0,0,.18);
+      box-shadow: 0 10px 18px rgba(0,0,0,.22);
+      overflow:hidden;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .railHead{
+      padding:10px 12px;
+      display:flex; justify-content:space-between; align-items:center;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      text-transform:uppercase;
+      letter-spacing:.8px;
+      font-weight:1100;
+      font-size:12px;
+      color:#fff;
+    }
+    .railHead small{
+      color:var(--muted);
+      font-weight:950;
+      letter-spacing:.6px;
+    }
+    .railBody{
+      padding:10px 10px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:hidden;
+      min-height:0;
+    }
+    .railItem{
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+      padding:10px 10px;
+      min-height:0;
+    }
+    .railLabel{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--muted);
       font-weight:1000;
-      letter-spacing:.7px;
+      letter-spacing:.8px;
       text-transform:uppercase;
       font-size:11px;
-      color:#fff;
-      white-space:nowrap;
+      margin-bottom:6px;
     }
-    .badge.breaking{
-      background: linear-gradient(135deg, rgba(255,64,64,.92), rgba(255,176,32,.75));
-      border-color: rgba(255,255,255,.18);
-      box-shadow: 0 0 22px rgba(255,64,64,.22);
+    .railLabel b{ color:#fff; }
+    .railText{
+      color:#fff;
+      font-weight:1050;
+      font-size:13px;
+      line-height:1.25;
+      letter-spacing:.2px;
+      overflow:hidden;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
     }
 
-    /* Lists row */
+    /* LISTS (world/local) */
     .lists{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -346,6 +407,7 @@
       text-transform:uppercase;
     }
     .item a{ color:inherit; text-decoration:none; }
+    .item a:hover .t{ text-decoration:underline; }
     .empty{
       margin-top:10px;
       border-radius:16px;
@@ -361,19 +423,21 @@
       white-space:pre-wrap;
     }
 
-    /* Right column: markets + weather + top local */
+    /* RIGHT COLUMN: markets + video + weather + top local */
     .rightCol{
       display:grid;
-      grid-template-rows: 1fr auto;
+      grid-template-rows: 1fr 1fr;
       gap: var(--gap);
       height:100%;
       min-height:0;
     }
-    .stack{
+
+    .quad{
       display:grid;
-      grid-template-rows: 1.1fr .9fr;
+      grid-template-rows: 1fr 1fr;
       gap: var(--gap);
       min-height:0;
+      height:100%;
     }
 
     .tvNote{
@@ -394,6 +458,38 @@
       height: calc(100% - 46px);
     }
     .tvWrap > div{ height:100%; }
+
+    .videoWrap{
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.14);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      height: calc(100% - 46px);
+      min-height:0;
+      position:relative;
+    }
+    .videoWrap iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+    }
+    .videoFallback{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      padding:14px;
+      text-align:center;
+      color:var(--muted);
+      font-weight:1000;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      font-size:12px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.10), transparent 60%),
+        linear-gradient(135deg, rgba(54,194,255,.12), rgba(124,77,255,.10));
+    }
+    .videoFallback b{color:#fff}
 
     .wxBox{
       border-radius:22px;
@@ -422,11 +518,11 @@
     }
     .wxRow b{ color:#fff; font-variant-numeric: tabular-nums; }
 
-    /* ====== BOTTOM TICKER ====== */
+    /* ===== BOTTOM TICKER ===== */
     .ticker{
       position:absolute; left:0; right:0; bottom:0;
       height: var(--tickerH);
-      z-index:5;
+      z-index:7;
       border-top:1px solid rgba(255,255,255,.14);
       background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.30));
       backdrop-filter: blur(10px);
@@ -461,7 +557,7 @@
       .breaking{position:sticky; top:0}
       main{grid-template-columns:1fr; height:auto}
       .lists{grid-template-columns:1fr}
-      .stack{grid-template-rows:auto auto}
+      .rightCol{grid-template-rows:auto auto}
       .ticker{position:sticky}
     }
   </style>
@@ -490,9 +586,7 @@
   <!-- BREAKING -->
   <div class="breaking" id="breakingBar" aria-label="Breaking News">
     <div class="breakingTag">BREAKING</div>
-    <div class="breakingTrack" id="breakingTrack">
-      <span>—</span>
-    </div>
+    <div class="breakingTrack" id="breakingTrack"><span>—</span></div>
   </div>
 
   <main>
@@ -500,10 +594,10 @@
     <section class="card">
       <div class="card-inner leftCol">
 
-        <!-- HERO -->
+        <!-- HERO (with Now/Next rail) -->
         <div class="hero">
           <div class="heroMedia">
-            <img id="heroImg" class="heroImg" alt="" style="display:none;" />
+            <img id="heroImg" class="heroImg" alt="" />
             <div class="heroOverlay"></div>
             <div class="heroBug">
               <span class="dot"></span>
@@ -511,7 +605,7 @@
             </div>
           </div>
 
-          <div class="heroText">
+          <div class="heroRight">
             <div>
               <div class="heroKicker">
                 <span class="badge" id="heroSection">WORLD</span>
@@ -521,13 +615,36 @@
 
               <div class="heroTitle" id="heroTitle">Loading…</div>
               <div class="heroDeck" id="heroDeck">Fetching latest headlines…</div>
+
+              <div class="heroMeta">
+                <div><a href="#" id="heroLink" target="_blank" rel="noopener">OPEN STORY</a></div>
+                <div id="heroUpdated">—</div>
+              </div>
             </div>
 
-            <div class="heroMeta">
-              <div>
-                <a href="#" id="heroLink" target="_blank" rel="noopener">OPEN STORY</a>
+            <div class="rail" aria-label="Now and Next">
+              <div class="railHead">
+                <span>NOW / NEXT</span>
+                <small id="railHint">LIVE</small>
               </div>
-              <div id="heroUpdated">—</div>
+              <div class="railBody" id="railBody">
+                <div class="railItem">
+                  <div class="railLabel"><span>NOW</span><b id="railNowAge">—</b></div>
+                  <div class="railText" id="railNow">—</div>
+                </div>
+                <div class="railItem">
+                  <div class="railLabel"><span>NEXT</span><b id="railNext1Age">—</b></div>
+                  <div class="railText" id="railNext1">—</div>
+                </div>
+                <div class="railItem">
+                  <div class="railLabel"><span>THEN</span><b id="railNext2Age">—</b></div>
+                  <div class="railText" id="railNext2">—</div>
+                </div>
+                <div class="railItem">
+                  <div class="railLabel"><span>UP NEXT</span><b id="railNext3Age">—</b></div>
+                  <div class="railText" id="railNext3">—</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -567,8 +684,9 @@
     <!-- RIGHT -->
     <section class="card">
       <div class="card-inner rightCol">
-        <div class="stack">
 
+        <!-- Top half: Markets + Live Video -->
+        <div class="quad">
           <!-- MARKETS -->
           <div class="card">
             <div class="card-inner" style="height:100%;">
@@ -577,13 +695,39 @@
                 <span class="pill">TradingView</span>
               </div>
               <div class="tvNote">OANDA CFD symbols for embed compatibility</div>
-              <div class="tvWrap">
-                <div id="tv_widget"></div>
-              </div>
+              <div class="tvWrap"><div id="tv_widget"></div></div>
             </div>
           </div>
 
-          <!-- WEATHER + TOP LOCAL -->
+          <!-- VIDEO -->
+          <div class="card">
+            <div class="card-inner" style="height:100%;">
+              <div class="cardHead">
+                <h2>Live News</h2>
+                <span class="pill" id="videoMeta">Embed</span>
+              </div>
+              <div class="tvNote">Set a YouTube embed URL in config if your signage allows it</div>
+              <div class="videoWrap">
+                <iframe id="videoFrame" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                <div class="videoFallback" id="videoFallback" style="display:none;">
+                  <div>
+                    <div><b>VIDEO UNAVAILABLE</b></div>
+                    <div style="margin-top:10px; line-height:1.35;">
+                      Your signage/browser blocked the embed or the URL is not set.
+                      <div style="margin-top:10px; opacity:.95;">
+                        Set <b>VIDEO_EMBED_URL</b> to a YouTube <b>embed</b> link.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom half: Weather + Top Local -->
+        <div class="quad">
+          <!-- WEATHER -->
           <div class="card">
             <div class="card-inner" style="height:100%; display:grid; grid-template-rows:auto 1fr; gap:10px;">
               <div class="cardHead">
@@ -606,18 +750,17 @@
             </div>
           </div>
 
-        </div>
-
-        <!-- TOP LOCAL (compact) -->
-        <div class="card">
-          <div class="card-inner">
-            <div class="cardHead">
-              <h2>Top Local</h2>
-              <span class="pill" id="mixMeta">—</span>
-            </div>
-            <div class="panel">
-              <ul class="list" id="mixList"></ul>
-              <div class="empty" id="mixEmpty" style="display:none;"></div>
+          <!-- TOP LOCAL -->
+          <div class="card">
+            <div class="card-inner">
+              <div class="cardHead">
+                <h2>Top Local</h2>
+                <span class="pill" id="mixMeta">—</span>
+              </div>
+              <div class="panel">
+                <ul class="list" id="mixList"></ul>
+                <div class="empty" id="mixEmpty" style="display:none;"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -645,7 +788,15 @@
     const ROTATE_S = 12;
 
     // Paste your RSS2JSON API key here (recommended)
-    const RSS2JSON_API_KEY = ""; // e.g. "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    const RSS2JSON_API_KEY = "";
+
+    // Live video (YouTube embed URL recommended).
+    // Examples (format):
+    //   https://www.youtube.com/embed/VIDEO_ID?autoplay=1&mute=1&playsinline=1
+    //   https://www.youtube.com/embed/live_stream?channel=CHANNEL_ID&autoplay=1&mute=1&playsinline=1
+    //
+    // Leave blank to show the fallback message.
+    const VIDEO_EMBED_URL = "";
 
     // RSS feeds
     const FEEDS = {
@@ -672,11 +823,14 @@
     // ==========================
     let nextRefreshAt = Date.now() + REFRESH_MS;
     let rotateIn = ROTATE_S;
+
     let worldItems = [];
     let localItems = [];
-    let heroIndex = 0;
-    let heroMode = "world"; // alternate world/local on rotate
     let breakingItems = [];
+
+    // Rotation queue (interleaved World/Local)
+    let rotationQueue = [];
+    let rotationIndex = 0;
 
     // ==========================
     // HELPERS
@@ -761,8 +915,16 @@
       const base = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(feedUrl);
       return RSS2JSON_API_KEY ? (base + "&api_key=" + encodeURIComponent(RSS2JSON_API_KEY)) : base;
     }
+
+    function stripHtml(html){
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html || "";
+      const text = (tmp.textContent || tmp.innerText || "").trim();
+      return text.replace(/\s+/g," ");
+    }
+
     function bestImage(it){
-      // RSS2JSON often has enclosure.link, thumbnail, or may embed media in description.
+      // RSS2JSON often provides enclosure.link, thumbnail, or <img> in description.
       const enc = it && it.enclosure && it.enclosure.link ? it.enclosure.link : "";
       if(enc && /^https?:\/\//i.test(enc)) return enc;
 
@@ -775,19 +937,64 @@
 
       return "";
     }
-    function stripHtml(html){
-      const tmp = document.createElement("div");
-      tmp.innerHTML = html || "";
-      const text = (tmp.textContent || tmp.innerText || "").trim();
-      return text.replace(/\s+/g," ");
+
+    function makeFallbackHeroSvg(title, source){
+      // Clean, always-available image (data URI SVG)
+      const t = (title || "TOP STORY").slice(0, 80);
+      const s = (source || "LIVE").slice(0, 32);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+          <defs>
+            <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="rgba(54,194,255,0.55)"/>
+              <stop offset="0.55" stop-color="rgba(124,77,255,0.45)"/>
+              <stop offset="1" stop-color="rgba(0,0,0,0.65)"/>
+            </linearGradient>
+            <radialGradient id="r" cx="30%" cy="25%" r="80%">
+              <stop offset="0" stop-color="rgba(255,255,255,0.20)"/>
+              <stop offset="1" stop-color="rgba(255,255,255,0)"/>
+            </radialGradient>
+          </defs>
+          <rect width="1280" height="720" fill="url(#g)"/>
+          <rect width="1280" height="720" fill="url(#r)"/>
+          <g opacity="0.35">
+            <circle cx="220" cy="170" r="140" fill="rgba(255,255,255,0.08)"/>
+            <circle cx="1030" cy="520" r="210" fill="rgba(255,176,32,0.10)"/>
+          </g>
+          <g>
+            <rect x="60" y="54" width="220" height="48" rx="24" fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.20)"/>
+            <text x="170" y="86" text-anchor="middle" font-family="system-ui,Segoe UI,Roboto,Arial" font-size="18" font-weight="800" fill="#ffffff" letter-spacing="2">BROADCAST</text>
+          </g>
+          <g>
+            <text x="60" y="610" font-family="system-ui,Segoe UI,Roboto,Arial" font-size="22" font-weight="900" fill="rgba(255,255,255,0.85)" letter-spacing="1.5">${escapeXml(s.toUpperCase())}</text>
+            <text x="60" y="658" font-family="system-ui,Segoe UI,Roboto,Arial" font-size="44" font-weight="900" fill="#ffffff">${escapeXml(t)}</text>
+          </g>
+        </svg>`;
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     }
+
+    function escapeXml(s){
+      return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+    }
+
     function isBreakingItem(x){
       const t = (x.title || "").toLowerCase();
-      const s = (x.source || "").toLowerCase();
       const d = (x.description || "").toLowerCase();
       return t.includes("breaking") || t.includes("urgent") || t.includes("live:") ||
-             d.includes("breaking") || d.includes("urgent") ||
-             s.includes("breaking");
+             d.includes("breaking") || d.includes("urgent");
+    }
+
+    function interleave(a, b, limit){
+      // a0, b0, a1, b1...
+      const out = [];
+      let i = 0;
+      while(out.length < limit && (i < a.length || i < b.length)){
+        if(i < a.length) out.push({ ...a[i], section:"WORLD" });
+        if(out.length >= limit) break;
+        if(i < b.length) out.push({ ...b[i], section:"LOCAL" });
+        i++;
+      }
+      return out;
     }
 
     // ==========================
@@ -872,7 +1079,7 @@
     }
 
     // ==========================
-    // HERO / BREAKING / TICKER
+    // HERO / BREAKING / TICKER / RAIL
     // ==========================
     function setBreakingBar(items){
       const bar = $("breakingBar");
@@ -882,10 +1089,8 @@
         return;
       }
       bar.classList.add("on");
-
       const parts = items.slice(0, 6).map(x => x.title).filter(Boolean);
       const html = parts.map(t => `<span>${escapeHtml(t)}</span>`).join(`<span class="breakingSep"> • </span>`);
-      // Duplicate for seamless loop
       track.innerHTML = (html || "<span>BREAKING</span>") + `<span class="breakingSep"> • </span>` + (html || "<span>BREAKING</span>");
     }
 
@@ -896,9 +1101,7 @@
       const wx = ($("wxDesc").textContent || "—") + " " + ($("wxTemp").textContent || "--") + "°";
 
       const parts = [];
-      if(breakingItems.length){
-        parts.push("BREAKING: " + breakingItems[0].title);
-      }
+      if(breakingItems.length) parts.push("BREAKING: " + breakingItems[0].title);
       parts.push("WORLD: " + worldTop);
       parts.push("LOCAL: " + localTop);
       parts.push("WEATHER: " + wx);
@@ -909,19 +1112,19 @@
       track.innerHTML = (html || fallback) + `<span class="tickSep"> • </span>` + (html || fallback);
     }
 
-    function setHeroFrom(item, sectionLabel){
+    function setHero(item){
       const title = item?.title || "—";
       const link  = item?.link || "#";
       const when  = item?.pubDate ? timeAgo(item.pubDate) : "—";
       const source= item?.source || "TOP STORY";
-      const img   = bestImage(item);
+      const section = item?.section || "TOP";
       const desc  = stripHtml(item?.description || "");
       const deck  = desc ? desc : "Tap OPEN STORY to read more.";
 
       $("heroTitle").textContent = title;
       $("heroDeck").textContent = deck;
-      $("heroSource").textContent = source.toUpperCase();
-      $("heroSection").textContent = sectionLabel.toUpperCase();
+      $("heroSource").textContent = String(source).toUpperCase();
+      $("heroSection").textContent = String(section).toUpperCase();
       $("heroAge").textContent = when ? when.toUpperCase() : "—";
       $("heroLink").href = link;
       $("heroUpdated").textContent = "UPDATED " + fmtTime12(new Date());
@@ -929,32 +1132,53 @@
       const isBreaking = item && isBreakingItem(item);
       $("heroBreaking").style.display = isBreaking ? "" : "none";
 
+      // Always show an image:
+      // - if feed has one, use it
+      // - otherwise, generate a fallback SVG image
       const imgEl = $("heroImg");
-      if(img){
-        imgEl.onload = () => { imgEl.style.display = ""; };
-        imgEl.onerror = () => { imgEl.style.display = "none"; imgEl.removeAttribute("src"); };
-        imgEl.src = img;
-      } else {
-        imgEl.style.display = "none";
-        imgEl.removeAttribute("src");
-      }
+      const img = bestImage(item);
+      const fallback = makeFallbackHeroSvg(title, source);
+
+      imgEl.onerror = () => { imgEl.src = fallback; };
+      imgEl.src = img || fallback;
+    }
+
+    function updateRail(){
+      // NOW = current rotation item (most recently set)
+      const now = rotationQueue[rotationIndex - 1] || rotationQueue[0] || null;
+      const n1  = rotationQueue[rotationIndex] || null;
+      const n2  = rotationQueue[rotationIndex + 1] || null;
+      const n3  = rotationQueue[rotationIndex + 2] || null;
+
+      const fmt = (it) => it ? it.title : "—";
+      const age = (it) => it && it.pubDate ? timeAgo(it.pubDate).toUpperCase() : "—";
+
+      $("railNow").textContent = fmt(now);
+      $("railNowAge").textContent = age(now);
+
+      $("railNext1").textContent = fmt(n1);
+      $("railNext1Age").textContent = age(n1);
+
+      $("railNext2").textContent = fmt(n2);
+      $("railNext2Age").textContent = age(n2);
+
+      $("railNext3").textContent = fmt(n3);
+      $("railNext3Age").textContent = age(n3);
+
+      const hint = breakingItems.length ? "BREAKING ON" : "LIVE";
+      $("railHint").textContent = hint;
     }
 
     function rotateHero(){
-      const pool = (heroMode === "world") ? worldItems : localItems;
-      const label = (heroMode === "world") ? "World" : "Local";
-
-      if(pool && pool.length){
-        const idx = heroIndex % pool.length;
-        setHeroFrom(pool[idx], label);
-        heroIndex++;
-      } else {
-        // fallback
-        setHeroFrom({ title:"Waiting for headlines…", source:"SYSTEM", description:"" }, label);
+      if(!rotationQueue.length){
+        setHero({ title:"Waiting for headlines…", source:"SYSTEM", description:"", section:"LIVE" });
+        updateRail();
+        return;
       }
-
-      // alternate modes so it feels like a channel
-      heroMode = (heroMode === "world") ? "local" : "world";
+      const item = rotationQueue[rotationIndex % rotationQueue.length];
+      rotationIndex++;
+      setHero(item);
+      updateRail();
     }
 
     // ==========================
@@ -963,7 +1187,6 @@
     function initTradingView(){
       const mount = $("tv_widget");
       mount.innerHTML = "";
-
       const payload = {
         "symbols": MARKET_SYMBOLS,
         "chartOnly": false,
@@ -997,15 +1220,43 @@
     }
 
     // ==========================
+    // VIDEO
+    // ==========================
+    function initVideo(){
+      const frame = $("videoFrame");
+      const fallback = $("videoFallback");
+
+      if(!VIDEO_EMBED_URL){
+        frame.src = "about:blank";
+        fallback.style.display = "";
+        $("videoMeta").textContent = "Not set";
+        return;
+      }
+
+      $("videoMeta").textContent = "Live";
+      fallback.style.display = "none";
+      frame.src = VIDEO_EMBED_URL;
+
+      // If the embed is blocked, the iframe might still load "something" (or not),
+      // but many signage environments show a blank area. Provide a quick manual toggle:
+      // if it doesn't display after 4s, show fallback overlay.
+      setTimeout(() => {
+        try{
+          // If URL is set but still blank in your environment, you can force fallback by setting this to true.
+          const FORCE_FALLBACK = false;
+          if(FORCE_FALLBACK) fallback.style.display = "";
+        }catch(e){}
+      }, 4000);
+    }
+
+    // ==========================
     // REFRESH LOOP
     // ==========================
     async function refreshAll(){
       const started = Date.now();
       $("updated").textContent = "UPDATING…";
-
       $("place").textContent = LOCATION.label;
 
-      // Weather
       await loadWeather().catch(() => {
         $("wxMeta").textContent = "NO DATA";
         $("wxDesc").textContent = "UNAVAILABLE";
@@ -1013,7 +1264,6 @@
         $("wxEmpty").textContent = "Weather failed to load.";
       });
 
-      // News
       const [worldGroups, localGroups] = await Promise.all([
         loadFeeds(FEEDS.world),
         loadFeeds(FEEDS.local)
@@ -1022,11 +1272,15 @@
       worldItems = mergeAndSort(worldGroups);
       localItems = mergeAndSort(localGroups);
 
-      // Breaking candidates from both pools (recent)
+      // Build interleaved rotation queue
+      rotationQueue = interleave(worldItems.slice(0, 20), localItems.slice(0, 20), 40);
+      if(rotationIndex >= rotationQueue.length) rotationIndex = 0;
+
+      // Breaking candidates (recent)
       const combined = [...worldItems.slice(0, 20), ...localItems.slice(0, 20)];
       breakingItems = combined.filter(isBreakingItem).slice(0, 8);
 
-      // Render lists
+      // Lists
       if(worldItems.length){
         $("worldMeta").textContent = worldItems.length + " ITEMS";
         setEmpty("world", "");
@@ -1055,14 +1309,20 @@
       setBreakingBar(breakingItems);
       setTicker();
 
-      // Update hero immediately using top story
-      const topWorld = worldItems[0];
-      const topLocal = localItems[0];
+      // Force hero to breaking if present, else first in queue
+      const heroPick = breakingItems[0]
+        ? { ...breakingItems[0], section: "BREAKING" }
+        : (rotationQueue[0] || { title:"Waiting for headlines…", source:"SYSTEM", description:"", section:"LIVE" });
 
-      // Prefer breaking if present, then world, then local
-      const heroPick = breakingItems[0] || topWorld || topLocal;
-      const heroLabel = breakingItems[0] ? "Breaking" : (topWorld ? "World" : "Local");
-      setHeroFrom(heroPick || {title:"No headlines", source:"SYSTEM"}, heroLabel);
+      setHero(heroPick);
+
+      // Align rotationIndex so NEXT items are correct after forcing hero
+      if(rotationQueue.length){
+        rotationIndex = 1;
+      } else {
+        rotationIndex = 0;
+      }
+      updateRail();
 
       const took = Math.max(1, Math.round((Date.now() - started)/1000));
       $("updated").textContent = "UPDATED " + fmtTime12(new Date()) + " • " + took + "s";
@@ -1072,11 +1332,11 @@
     }
 
     function start(){
-      // Initial UI ticks
+      // clocks
       tickClock(); setInterval(tickClock, 1000);
       tickCountdown(); setInterval(tickCountdown, 1000);
 
-      // Rotate countdown + rotate hero
+      // rotation countdown + rotate hero
       $("rotIn").textContent = String(rotateIn);
       setInterval(() => {
         rotateIn -= 1;
@@ -1087,10 +1347,11 @@
         $("rotIn").textContent = String(rotateIn);
       }, 1000);
 
-      // Markets
+      // markets + video
       initTradingView();
+      initVideo();
 
-      // Initial load + refresh schedule
+      // initial load + refresh schedule
       refreshAll().catch(() => { $("updated").textContent = "UPDATE FAILED"; });
       setInterval(() => { refreshAll().catch(() => {}); }, REFRESH_MS);
     }
