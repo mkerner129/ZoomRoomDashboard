@@ -15,7 +15,6 @@
       --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
       --slots: 12;
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -29,7 +28,6 @@
         linear-gradient(180deg, var(--bgTop), var(--bgMid) 50%, var(--bgBot));
       overflow:hidden;
     }
-
     .sheen{
       position:absolute; inset:-60% -60%;
       background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,.08) 45%, transparent 55%);
@@ -119,7 +117,6 @@
       backdrop-filter: blur(12px);
     }
     .card-inner{ padding:18px; }
-
     .left{display:grid;grid-template-rows:auto auto 1fr;gap:14px;height:100%;}
 
     .hero{
@@ -248,7 +245,7 @@
       position:relative;
     }
 
-    /* REMOVE NOW LINE */
+    /* Remove NOW line */
     #nowLine{ display:none !important; }
 
     .bar{
@@ -376,9 +373,10 @@
       <div>
         <div class="title">Weather Center</div>
         <div class="subtitle">
-          <span id="placeLabel">Bedford, Nova Scotia</span>
+          <span id="placeLabel">Locating…</span>
           <span class="pill" id="wxUpdated">Updating…</span>
           <span class="pill">Next refresh in <span id="refreshIn">--:--</span></span>
+          <span class="pill" id="locMode">LOC: —</span>
         </div>
       </div>
     </div>
@@ -488,14 +486,8 @@
     var TRACE_HEIGHT_PX = 2;
     var TRACE_OPACITY = 0.06;
 
-    // Bedford, NS fallback (always works)
-    var FALLBACK = {
-      lat: 44.7326,
-      lon: -63.6533,
-      label: "Fallback, Nova Scotia"
-    };
-
-    // Location will try to override via geolocation; otherwise fallback stays.
+    // Bedford fallback
+    var FALLBACK = { lat: 44.7326, lon: -63.6533, label: "Bedford, Nova Scotia" };
     var LOCATION = { lat: FALLBACK.lat, lon: FALLBACK.lon, label: FALLBACK.label };
 
     var __svgId = 0;
@@ -542,29 +534,55 @@
       el("refreshIn").textContent = String(m).padStart(2,'0') + ":" + String(r).padStart(2,'0');
     }
 
-    // Attempt browser geolocation (may be blocked in Zoom signage).
-    function tryGeolocationOnce(){
-      return new Promise(function(resolve){
-        if(!navigator.geolocation) return resolve(false);
-
-        navigator.geolocation.getCurrentPosition(
-          function(pos){
-            LOCATION.lat = pos.coords.latitude;
-            LOCATION.lon = pos.coords.longitude;
-            el("status").textContent = "GEO OK";
-            resolve(true);
-          },
-          function(){
-            el("status").textContent = "GEO OFF (USING BEDFORD)";
-            resolve(false);
-          },
-          { enableHighAccuracy:false, timeout:4000, maximumAge: 10*60*1000 }
-        );
-      });
+    // Read location from query string if provided:
+    // ?lat=44.73&lon=-63.65&label=Bedford%2C%20Nova%20Scotia
+    function applyQueryLocation(){
+      try{
+        var q = new URLSearchParams(location.search || "");
+        var lat = q.get("lat"), lon = q.get("lon"), label = q.get("label");
+        if(lat && lon && isFinite(Number(lat)) && isFinite(Number(lon))){
+          LOCATION.lat = Number(lat);
+          LOCATION.lon = Number(lon);
+          if(label) LOCATION.label = String(label);
+          el("locMode").textContent = "LOC: URL";
+          return true;
+        }
+      }catch(e){}
+      return false;
     }
 
-    // Build a YYYY-MM-DDTHH key in the SAME timezone Open-Meteo used (via utc_offset_seconds).
-    // This prevents the “bars disappeared” bug if device timezone differs.
+    // IP-based geolocation (no permission prompt). Uses ipapi.co (no key).
+    // If blocked by network/CORS, it just falls back.
+    function ipGeolocate(){
+      el("status").textContent = "LOCATING (IP)…";
+      return fetch("https://ipapi.co/json/", { cache: "no-store" })
+        .then(function(res){
+          if(!res.ok) throw new Error("IP geo failed");
+          return res.json();
+        })
+        .then(function(j){
+          if(j && isFinite(Number(j.latitude)) && isFinite(Number(j.longitude))){
+            LOCATION.lat = Number(j.latitude);
+            LOCATION.lon = Number(j.longitude);
+
+            // Nice label if available
+            var parts = [];
+            if(j.city) parts.push(j.city);
+            if(j.region) parts.push(j.region);
+            if(j.country_name) parts.push(j.country_name);
+            if(parts.length) LOCATION.label = parts.join(", ");
+
+            el("locMode").textContent = "LOC: IP";
+            return true;
+          }
+          return false;
+        })
+        .catch(function(){
+          return false;
+        });
+    }
+
+    // Build YYYY-MM-DDTHH key in Open-Meteo's timezone (using utc_offset_seconds)
     function nowKeyForOffset(utcOffsetSeconds){
       var ms = Date.now() + Number(utcOffsetSeconds || 0) * 1000;
       var d = new Date(ms);
@@ -574,7 +592,6 @@
       var hh = String(d.getUTCHours()).padStart(2,"0");
       return yyyy + "-" + mm + "-" + dd + "T" + hh;
     }
-
     function findStartIndex(times, utcOffsetSeconds){
       var key = nowKeyForOffset(utcOffsetSeconds);
       var start = 0;
@@ -780,7 +797,7 @@
       var start = findStartIndex(times, utcOffset);
 
       for(var i = start; i < Math.min(start + SLOTS, times.length); i++){
-        var t = new Date(times[i]); // Open-Meteo returns local timestamps for the chosen timezone
+        var t = new Date(times[i]);
         var label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
         var pmm = Number((precipMM && precipMM[i] != null) ? precipMM[i] : 0);
@@ -807,7 +824,7 @@
       bars.innerHTML = "";
       labels.innerHTML = "";
       mode.textContent = "mm";
-      if(nowLine) nowLine.style.display = "none"; // keep hidden
+      if(nowLine) nowLine.style.display = "none";
 
       var series = (Array.isArray(precipMM) && precipMM.length)
         ? precipMM.map(function(v){ return Number(v || 0); })
@@ -845,6 +862,7 @@
 
         var b = document.createElement("div");
         b.className = "bar";
+
         if(isTrace){
           b.classList.add("trace");
           b.style.opacity = String(TRACE_OPACITY);
@@ -883,7 +901,6 @@
     function loadWeather(){
       el("placeLabel").textContent = LOCATION.label;
 
-      // Use timezone=auto so the API resolves the correct local timezone from lat/lon :contentReference[oaicite:2]{index=2}
       var url =
         "https://api.open-meteo.com/v1/forecast?latitude=" + encodeURIComponent(LOCATION.lat) +
         "&longitude=" + encodeURIComponent(LOCATION.lon) +
@@ -935,10 +952,26 @@
         tickClock(); setInterval(tickClock, 1000);
         tickCountdown(); setInterval(tickCountdown, 1000);
 
-        // Try geo once, but always load weather (fallback is Bedford)
-        tryGeolocationOnce()
-          .then(function(){ return loadWeather(); })
-          .catch(showFatal);
+        // Location resolution order:
+        // 1) URL query (?lat=..&lon=..)
+        // 2) IP geo
+        // 3) Bedford fallback
+        el("locMode").textContent = "LOC: —";
+        var usedUrl = applyQueryLocation();
+        if(usedUrl){
+          el("status").textContent = "USING URL LOCATION";
+          el("placeLabel").textContent = LOCATION.label;
+          loadWeather().catch(showFatal);
+        } else {
+          ipGeolocate().then(function(ok){
+            if(!ok){
+              LOCATION.lat = FALLBACK.lat; LOCATION.lon = FALLBACK.lon; LOCATION.label = FALLBACK.label;
+              el("locMode").textContent = "LOC: FALLBACK";
+            }
+            el("placeLabel").textContent = LOCATION.label;
+            return loadWeather();
+          }).catch(showFatal);
+        }
 
         setInterval(function(){ loadWeather().catch(function(){}); }, REFRESH_MS);
       }catch(e){
