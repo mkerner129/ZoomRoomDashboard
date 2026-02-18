@@ -201,7 +201,25 @@
       background: rgba(0,0,0,.10);
       border:1px solid rgba(255,255,255,.10);
       overflow:hidden;
+      position:relative;
     }
+
+    /* ✅ Center highlight for "current hour" in hourly strip */
+    .h-strip::after{
+      content:"";
+      position:absolute;
+      top:8px; bottom:8px;
+      left: calc(10px + (100% - 20px) / var(--slots) * (var(--centerIndex) + 0.5));
+      width: calc((100% - 20px) / var(--slots));
+      transform: translateX(-50%);
+      border-radius: 14px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 0 18px rgba(255,255,255,.08);
+      pointer-events:none;
+      z-index:1;
+    }
+
     .h-item{
       border-radius:18px;
       border:1px solid rgba(255,255,255,.16);
@@ -209,7 +227,15 @@
       padding:10px 8px 8px;
       text-align:center;
       min-width:0;
+      position:relative;
+      z-index:2; /* above center highlight */
     }
+    .h-item.is-center{
+      border-color: rgba(255,255,255,.28);
+      background: rgba(0,0,0,.18);
+      box-shadow: 0 10px 18px rgba(0,0,0,.22), 0 0 18px rgba(255,255,255,.10);
+    }
+
     .h-time{color:var(--muted);font-size:12px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
     .h-ico{height:44px;display:flex;align-items:center;justify-content:center;margin:6px 0;}
     .h-temp{font-size:18px;font-weight:1000;font-variant-numeric: tabular-nums;color:#fff;}
@@ -273,8 +299,24 @@
       position:relative;
     }
 
-    /* Remove NOW line */
+    /* ✅ Remove NOW line */
     #nowLine{ display:none !important; }
+
+    /* ✅ Center highlight for "current hour" in precip bars */
+    .bars::after{
+      content:"";
+      position:absolute;
+      top:8px; bottom:8px;
+      left: calc(10px + (100% - 20px) / var(--slots) * (var(--centerIndex) + 0.5));
+      width: calc((100% - 20px) / var(--slots));
+      transform: translateX(-50%);
+      border-radius: 14px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 0 18px rgba(255,255,255,.08);
+      pointer-events:none;
+      z-index:1;
+    }
 
     .bar{
       width:100%;
@@ -290,43 +332,30 @@
         rgba(18,106,255,1) 100%
       );
       transform: translateZ(0);
-      transition: height 900ms cubic-bezier(.22,1,.36,1), opacity 700ms ease;
+      /* ✅ Remove "rain" animation look: no fancy shimmer + no height easing required,
+         but keep a simple height transition so it still animates once. */
+      transition: height 650ms ease, opacity 450ms ease;
       will-change: height, opacity;
+      z-index:2; /* above center highlight */
     }
-    .bar::before{
-      content:"";
-      position:absolute;
-      inset:-40% -60%;
-      background: linear-gradient(120deg,
-        transparent 35%,
-        rgba(255,255,255,.20) 45%,
-        transparent 55%);
-      transform: rotate(8deg);
-      animation: shimmer 2.4s linear infinite;
-      opacity:.55;
-      mix-blend-mode: screen;
-      pointer-events:none;
-    }
-    @keyframes shimmer{
-      0%{transform: translateX(-30%) rotate(8deg)}
-      100%{transform: translateX(30%) rotate(8deg)}
-    }
+
+    /* ✅ Remove shimmer animation entirely */
+    .bar::before{ content:""; display:none !important; }
     .bar::after{
       content:"";
       position:absolute;
       inset:0;
-      background: linear-gradient(180deg, rgba(255,255,255,.22), transparent 55%);
-      opacity:.85;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%);
+      opacity:.75;
       pointer-events:none;
     }
 
-    /* Trace bars: nearly invisible + no shimmer */
+    /* Trace bars: nearly invisible */
     .bar.trace{
       opacity: .06 !important;
       border-color: rgba(255,255,255,.10);
       box-shadow: none !important;
     }
-    .bar.trace::before{ animation: none !important; opacity: 0 !important; }
     .bar.trace::after{ opacity: .12 !important; }
 
     .bar-value{
@@ -370,6 +399,10 @@
     .bar-labels span{
       text-align:center;
       min-height: 12px;
+    }
+    .bar-labels span.is-center{
+      color:#fff;
+      text-shadow: 0 10px 18px rgba(0,0,0,.35);
     }
 
     /* ======= RIGHT PANEL ======= */
@@ -805,6 +838,13 @@
       return start;
     }
 
+    function to12hLabel(dateObj){
+      var hr = dateObj.getHours();
+      var ampm = hr >= 12 ? "PM" : "AM";
+      hr = hr % 12; if(hr === 0) hr = 12;
+      return hr + ":00" + ampm;
+    }
+
     function renderHourly(data){
       var hourlyEl = el("hourly");
       hourlyEl.innerHTML = "";
@@ -815,26 +855,32 @@
       var precipMM = (data.hourly && data.hourly.precipitation) ? data.hourly.precipitation : [];
 
       var utcOffset = Number(data.utc_offset_seconds || 0);
-      var start = findStartIndex(times, utcOffset);
+
+      /* ✅ Center current hour in the middle */
+      var centerIndex = Math.floor(SLOTS/2);
+      var start = Math.max(0, findStartIndex(times, utcOffset) - centerIndex);
+
+      // expose center index to CSS for highlight placement
+      document.documentElement.style.setProperty('--centerIndex', String(centerIndex));
 
       for(var i = start; i < Math.min(start + SLOTS, times.length); i++){
         var t = new Date(times[i]);
         var label = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-        var pmm = Number((precipMM && precipMM[i] != null) ? precipMM[i] : 0);
-        var mini = "P " + (Math.round(pmm*10)/10).toFixed(1) + " mm";
-
         var item = document.createElement("div");
         item.className = "h-item";
+        if((i - start) === centerIndex) item.classList.add("is-center");
+
+        /* ✅ remove precip mini text under temp (requested) */
         item.innerHTML =
           '<div class="h-time">' + label + '</div>' +
           '<div class="h-ico">' + svgFor(code[i], 40) + '</div>' +
-          '<div class="h-temp">' + Math.round(Number(temp[i] || 0)) + '°</div>' +
-          '<div class="h-mini">' + mini + '</div>';
+          '<div class="h-temp">' + Math.round(Number(temp[i] || 0)) + '°</div>';
 
         hourlyEl.appendChild(item);
       }
 
+      // PRECIP PANEL
       var bars   = el("bars");
       var labels = el("barLabels");
       var banner = el("precipBanner");
@@ -853,27 +899,21 @@
         return;
       }
 
-      // Build slice of raw values
+      // slice values aligned with centered window
       var slice = [];
-      for (var j = start; j < Math.min(start + SLOTS, times.length); j++) {
-        slice.push(Number(series[j] || 0));
-      }
+      for (var j = start; j < Math.min(start + SLOTS, times.length); j++) slice.push(Number(series[j] || 0));
       while (slice.length < SLOTS) slice.push(0);
 
-      // Max for scaling, but ignore trace values for scale
       var max = 0;
-      for (var m = 0; m < slice.length; m++) {
+      for (var m = 0; m < slice.length; m++){
         var v = slice[m];
         if (v >= DRY_THRESHOLD_MM && v > max) max = v;
       }
-      if(max <= 0) max = DRY_THRESHOLD_MM; // avoid divide-by-zero
+      if(max <= 0) max = DRY_THRESHOLD_MM;
 
-      // Banner uses max of meaningful precipitation
       var shownMax = 0;
-      for (var mm2 = 0; mm2 < slice.length; mm2++) {
-        if (slice[mm2] > shownMax) shownMax = slice[mm2];
-      }
-      banner.textContent = "MAX " + (Math.round(shownMax*10)/10).toFixed(1) + " MM (NEXT " + SLOTS + "H)";
+      for (var mm2 = 0; mm2 < slice.length; mm2++) if (slice[mm2] > shownMax) shownMax = slice[mm2];
+      banner.textContent = "MAX " + (Math.round(shownMax*10)/10).toFixed(1) + " MM (" + SLOTS + "H WINDOW)";
 
       var toAnimate = [];
 
@@ -881,14 +921,9 @@
         var rawVal = Number(slice[k] || 0);
         var isTrace = rawVal < DRY_THRESHOLD_MM;
 
-        // Height rules:
-        var targetH;
-        if(isTrace){
-          targetH = TRACE_HEIGHT_PX;
-        } else {
-          targetH = Math.max(10, Math.round((rawVal / max) * 120));
-          targetH = Math.min(140, targetH);
-        }
+        var targetH = isTrace
+          ? TRACE_HEIGHT_PX
+          : Math.min(140, Math.max(10, Math.round((rawVal / max) * 120)));
 
         var b = document.createElement("div");
         b.className = "bar";
@@ -904,18 +939,14 @@
         b.style.height = "0px";
         b.innerHTML = '<div class="bar-value">' + (isTrace ? "" : (Math.round(rawVal*10)/10).toFixed(1)) + '</div>';
         bars.appendChild(b);
-
         toAnimate.push({ el: b, h: targetH });
 
-        // ✅ 12-hour labels under bars (every other label)
         var idx = start + k;
         var lab = document.createElement("span");
         if(idx < times.length){
           var tt = new Date(times[idx]);
-          var hr = tt.getHours();
-          var ampm = hr >= 12 ? "PM" : "AM";
-          hr = hr % 12; if(hr === 0) hr = 12;
-          lab.textContent = (k % 2 === 0) ? (hr + ":00" + ampm) : "";
+          lab.textContent = (k % 2 === 0) ? to12hLabel(tt) : "";
+          if(k === centerIndex) lab.classList.add("is-center");
         } else {
           lab.textContent = (k % 2 === 0) ? "--" : "";
         }
